@@ -1556,6 +1556,13 @@ function computeGroupStandings(g){
       st[lId].l++;st[lId].gf+=wsB;st[lId].ga+=wsA;
     }
   });
+  // aplica override manual de pontos se houver
+  if(g.ptsOverride){
+    Object.entries(g.ptsOverride).forEach(([pid,pts])=>{
+      const id = parseInt(pid) || pid;
+      if(st[id] !== undefined) st[id].p = pts;
+    });
+  }
   // sort: pts desc, saldo desc, gf desc
   const sorted=g.players.slice().sort((a,b)=>{
     const sa=st[a.id],sb=st[b.id];
@@ -1564,6 +1571,22 @@ function computeGroupStandings(g){
     return sb.gf-sa.gf;
   });
   return {st,sorted};
+}
+
+// ── edição direta de pontos na fase de grupos ──
+function adjGroupPts(gi, playerId, delta){
+  const g = groups[gi];
+  if(!g) return;
+  // encontra ou cria entrada manual de pontos no standings override
+  if(!g.ptsOverride) g.ptsOverride = {};
+  // calcula pts computados normalmente
+  const {st} = computeGroupStandings(g);
+  const base = st[playerId] ? st[playerId].p : 0;
+  // override acumula o delta sobre o base computado
+  const current = g.ptsOverride[playerId] !== undefined ? g.ptsOverride[playerId] : base;
+  g.ptsOverride[playerId] = Math.max(0, current + delta);
+  renderGroups();
+  saveState();
 }
 
 function renderGroups(){
@@ -1589,62 +1612,27 @@ function renderGroups(){
       <div class="group-name">Grupo ${g.letter}</div>
       <div class="group-meta">${g.players.length} part.</div>
     </div>`;
-    // standings table
-    html+=`<table class="group-table">
-      <thead><tr>
-        <th style="width:20px;"></th>
-        <th>Participante</th>
-        <th title="Pontos">Pts</th>
-        <th title="Vitórias">V</th>
-        <th title="Empates">E</th>
-        <th title="Derrotas">D</th>
-        <th title="Saldo">S</th>
-      </tr></thead>
-      <tbody>`;
+    // standings — só ranking + pontos editáveis
+    html+=`<table class="group-table"><tbody>`;
     sorted.forEach((p,rank)=>{
       const s=st[p.id];
       const qualifies=rank<qualN;
       html+=`<tr>
-        <td><span class="g-rank ${qualifies?'qualify':'out'}">${rank+1}</span></td>
+        <td style="width:24px;"><span class="g-rank ${qualifies?'qualify':'out'}">${rank+1}</span></td>
         <td><div class="g-player">
           <div class="g-avatar">${p.photo?`<img src="${p.photo}">`:`${p.flag}`}</div>
           <span class="g-pname">${p.name}</span>
         </div></td>
-        <td class="pts-bold">${s.p}</td>
-        <td>${s.w}</td>
-        <td>${s.d}</td>
-        <td>${s.l}</td>
-        <td>${s.gf-s.ga>=0?'+':''}${s.gf-s.ga}</td>
+        <td style="width:56px;">
+          <div style="display:flex;align-items:center;gap:3px;justify-content:flex-end;">
+            <button onclick="adjGroupPts(${gi},${p.id},-1)" style="width:18px;height:18px;border-radius:3px;border:1px solid rgba(248,113,113,.3);background:none;color:var(--red);cursor:pointer;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">−</button>
+            <span class="pts-bold" style="min-width:18px;text-align:center;">${s.p}</span>
+            <button onclick="adjGroupPts(${gi},${p.id},1)" style="width:18px;height:18px;border-radius:3px;border:1px solid rgba(52,211,153,.3);background:none;color:var(--green);cursor:pointer;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">+</button>
+          </div>
+        </td>
       </tr>`;
     });
-    html+=`</tbody></table>`;
-    // matches
-    html+=`<div class="group-matches">`;
-    g.matches.forEach((m,mi)=>{
-      const done=!!(m.winner||m.draw);
-      const sA=m.scoreA||0,sB=m.scoreB||0;
-      const live=!done&&(sA>0||sB>0);
-      const statusCls=done?'gms-done':live?'gms-live':'gms-pending';
-      const statusTxt=done?'Fim':live?'Ao vivo':'vs';
-      const wA=done&&m.winner&&m.winner.id===m.a.id;
-      const wB=done&&m.winner&&m.winner.id===m.b.id;
-      html+=`<div class="g-match ${done?'done':''}" onclick="openGroupMatch(${gi},${mi})">
-        <div class="g-match-team">
-          <div class="g-avatar" style="flex-shrink:0">${m.a.photo?`<img src="${m.a.photo}">`:`${m.a.flag}`}</div>
-          <span style="font-size:.74rem;font-weight:${wA?'700':'400'};color:${wA?'var(--gold2)':'var(--text)'}">${m.a.name}</span>
-        </div>
-        <div class="g-match-score">
-          <span class="g-score ${wA?'win':''}">${done||live?sA:'–'}</span>
-          <span class="g-score-sep">·</span>
-          <span class="g-score ${wB?'win':''}">${done||live?sB:'–'}</span>
-        </div>
-        <div class="g-match-team right">
-          <span style="font-size:.74rem;font-weight:${wB?'700':'400'};color:${wB?'var(--gold2)':'var(--text)'}">${m.b.name}</span>
-          <div class="g-avatar" style="flex-shrink:0">${m.b.photo?`<img src="${m.b.photo}">`:`${m.b.flag}`}</div>
-        </div>
-      </div>`;
-    });
-    html+=`</div></div>`;
+    html+=`</tbody></table></div>`;
   });
   html+=`</div>`;
   wrap.innerHTML=html;
@@ -2728,7 +2716,8 @@ function getState(){
     groups:groups.map(g=>({
       letter:g.letter,color:g.color,
       players:g.players.map(p=>({...p})),
-      matches:g.matches.map(m=>({a:m.a?{...m.a}:null,b:m.b?{...m.b}:null,winner:m.winner?{...m.winner}:null,draw:m.draw,scoreA:m.scoreA||0,scoreB:m.scoreB||0,groupIdx:m.groupIdx}))
+      matches:g.matches.map(m=>({a:m.a?{...m.a}:null,b:m.b?{...m.b}:null,winner:m.winner?{...m.winner}:null,draw:m.draw,scoreA:m.scoreA||0,scoreB:m.scoreB||0,groupIdx:m.groupIdx})),
+      ptsOverride:g.ptsOverride?{...g.ptsOverride}:{}
     })),
     currentRoundIdx,matchCount,groupsPhaseActive,
     ts:Date.now()
@@ -2741,7 +2730,8 @@ function applyState(data){
   groups=(data.groups||[]).map(g=>({
     letter:g.letter,color:g.color,
     players:(g.players||[]).map(p=>({...p})),
-    matches:(g.matches||[]).map(m=>({a:m.a?{...m.a}:null,b:m.b?{...m.b}:null,winner:m.winner?{...m.winner}:null,draw:m.draw||false,scoreA:m.scoreA||0,scoreB:m.scoreB||0,groupIdx:m.groupIdx||0}))
+    matches:(g.matches||[]).map(m=>({a:m.a?{...m.a}:null,b:m.b?{...m.b}:null,winner:m.winner?{...m.winner}:null,draw:m.draw||false,scoreA:m.scoreA||0,scoreB:m.scoreB||0,groupIdx:m.groupIdx||0})),
+    ptsOverride:g.ptsOverride?{...g.ptsOverride}:{}
   }));
   currentRoundIdx=data.currentRoundIdx||0;
   matchCount=data.matchCount||0;
