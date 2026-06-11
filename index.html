@@ -6,66 +6,9 @@
 <title>Copa GR — Temporada 2025</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-<!-- ═══════════════════════════════════════════════════════
-     FIREBASE — substitua as credenciais abaixo pelo novo projeto
-     Acesse: console.firebase.google.com → Configurações → Seus Apps → Web
-     ═══════════════════════════════════════════════════════ -->
+<!-- Firebase compat SDKs -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script>
-const firebaseConfig = {
-  apiKey:            "AIzaSyBtRjirFaCP5B115heSr-wLFEV1UE7r6z0",
-  authDomain:        "copa-gr-1b35f.firebaseapp.com",
-  databaseURL:       "https://copa-gr-1b35f-default-rtdb.firebaseio.com",
-  projectId:         "copa-gr-1b35f",
-  storageBucket:     "copa-gr-1b35f.firebasestorage.app",
-  messagingSenderId: "181425794866",
-  appId:             "1:181425794866:web:43d624cc295a0dea49312b",
-  measurementId:     "G-X20F8CMJ0M"
-};
-
-window.__firebaseReady = false;
-window.__isSyncing = false;
-
-function updateSyncStatus(status) {
-  const el = document.getElementById('syncStatus');
-  if (!el) { setTimeout(()=>updateSyncStatus(status), 300); return; }
-  if (status === 'connected') {
-    el.innerHTML = '<span class="sync-dot connected"></span>Sincronizado em tempo real';
-    el.className = 'sync-bar connected';
-  } else if (status === 'error') {
-    el.innerHTML = '<span class="sync-dot error"></span>Firebase não configurado — dados salvos apenas localmente';
-    el.className = 'sync-bar error';
-  }
-  el.style.display = 'flex';
-}
-
-try {
-  if (firebaseConfig.apiKey && firebaseConfig.databaseURL) {
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const dbRef = db.ref('copa_gr/estado');
-    window.__firebaseReady = true;
-    dbRef.on('value', function(snapshot) {
-      if (window.__isSyncing) return;
-      const data = snapshot.val();
-      if (!data) return;
-      try { window.__loadStateFromCloud(data); } catch(e) { console.error(e); }
-    });
-    window.__saveToCloud = function(state) {
-      if (!window.__firebaseReady) return;
-      window.__isSyncing = true;
-      dbRef.set(state).then(()=>{ setTimeout(()=>{ window.__isSyncing=false; }, 500); }).catch(e=>{ console.error(e); window.__isSyncing=false; });
-    };
-    updateSyncStatus('connected');
-  } else {
-    updateSyncStatus('error');
-  }
-} catch(e) {
-  console.error('Firebase erro:', e);
-  updateSyncStatus('error');
-}
-</script>
 
 <style>
 /* ── RESET & TOKENS ── */
@@ -2118,7 +2061,7 @@ function toggleEpmFlagPicker(){
   epmFlagPickerOpen=!epmFlagPickerOpen;const p=document.getElementById('epmFlagPicker');p.style.display=epmFlagPickerOpen?'block':'none';
   if(epmFlagPickerOpen){renderEpmFlagGrid(FLAGS);document.getElementById('epmFlagSearch').value='';setTimeout(()=>document.getElementById('epmFlagSearch').focus(),50);}
 }
-function renderEpmFlagGrid(list){document.getElementById('epmFlagGrid').innerHTML=list.map(({f,c,code})=>`<div class="flag-item" onclick="selectEpmFlagCode('${code||''}','${c}')" title="${c}" style="display:flex;align-items:center;justify-content:center;">${f}</div>`).join('');})=>`<div class="flag-item" onclick="selectEpmFlag('${f}','${c}')" title="${c}">${f}</div>`).join('');}
+function renderEpmFlagGrid(list){document.getElementById('epmFlagGrid').innerHTML=list.map(({f,c,code})=>`<div class="flag-item" onclick="selectEpmFlagCode('${code||''}','${c}')" title="${c}" style="display:flex;align-items:center;justify-content:center;">${f}</div>`).join('');}
 function filterEpmFlags(q){renderEpmFlagGrid(q?FLAGS.filter(({c})=>c.toLowerCase().includes(q.toLowerCase())):FLAGS);}
 function selectEpmFlagCode(code,c){
   const img=code?`<img src="https://flagcdn.com/w20/${code}.png" width="16" height="11" style="border-radius:1px;" alt="${code.toUpperCase()}">`:'🏳';
@@ -2256,7 +2199,8 @@ function handleRepescPhoto(input){
 }
 function toggleRepescFlagPicker(){
   repescFlagPickerOpen=!repescFlagPickerOpen;const p=document.getElementById('repescFlagPicker');p.style.display=repescFlagPickerOpen?'block':'none';
-  if(repescFlagPickerOpen){document.getElementById('repescFlagGrid').innerHTML=FLAGS.map(({f,c,code})=>`<div class="flag-item" onclick="selectRepescFlagCode('${code||''}','${c}')" title="${c}" style="display:flex;align-items:center;justify-content:center;">${f}</div>`).join('');}
+  if(repescFlagPickerOpen){document.getElementById('repescFlagGrid').innerHTML=FLAGS.map(({f,c,code})=>`<div class="flag-item" onclick="selectRepescFlagCode('${code||''}','${c}')" title="${c}" style="display:flex;align-items:center;justify-content:center;">${f}</div>`).join('');document.getElementById('repescFlagSearch').value='';setTimeout(()=>document.getElementById('repescFlagSearch').focus(),50);}
+}
 function filterRepescFlags(q){document.getElementById('repescFlagGrid').innerHTML=(q?FLAGS.filter(({c})=>c.toLowerCase().includes(q.toLowerCase())):FLAGS).map(({f,c,code})=>`<div class="flag-item" onclick="selectRepescFlagCode('${code||''}','${c}')" title="${c}" style="display:flex;align-items:center;justify-content:center;">${f}</div>`).join('');}
 function selectRepescFlagCode(code,c){
   const img=code?`<img src="https://flagcdn.com/w20/${code}.png" width="16" height="11" style="border-radius:1px;" alt="${code.toUpperCase()}">`:'🏳';
@@ -2358,5 +2302,71 @@ function hideSplash(){const s=document.getElementById('loadingSplash');if(s)s.st
   setTimeout(()=>{hideSplash();renderSellers();updateStats();renderGroups();},2000);
 })();
 </script>
+
+<!-- ═══ FIREBASE INIT — after SDKs are guaranteed loaded ═══ -->
+<script>
+(function initFirebase() {
+  var firebaseConfig = {
+    apiKey:            "AIzaSyBtRjirFaCP5B115heSr-wLFEV1UE7r6z0",
+    authDomain:        "copa-gr-1b35f.firebaseapp.com",
+    databaseURL:       "https://copa-gr-1b35f-default-rtdb.firebaseio.com",
+    projectId:         "copa-gr-1b35f",
+    storageBucket:     "copa-gr-1b35f.firebasestorage.app",
+    messagingSenderId: "181425794866",
+    appId:             "1:181425794866:web:43d624cc295a0dea49312b",
+    measurementId:     "G-X20F8CMJ0M"
+  };
+
+  window.__firebaseReady = false;
+  window.__isSyncing = false;
+
+  function updateSyncStatus(status) {
+    var el = document.getElementById('syncStatus');
+    if (!el) return;
+    if (status === 'connected') {
+      el.innerHTML = '<span class="sync-dot connected"></span>Sincronizado em tempo real';
+      el.className = 'sync-bar connected';
+    } else {
+      el.innerHTML = '<span class="sync-dot error"></span>Offline — dados salvos localmente';
+      el.className = 'sync-bar error';
+    }
+    el.style.display = 'flex';
+  }
+
+  try {
+    if (typeof firebase === 'undefined') {
+      console.warn('Firebase SDK não carregou.');
+      updateSyncStatus('error');
+      return;
+    }
+    firebase.initializeApp(firebaseConfig);
+    var db    = firebase.database();
+    var dbRef = db.ref('copa_gr/estado');
+    window.__firebaseReady = true;
+
+    dbRef.on('value', function(snapshot) {
+      if (window.__isSyncing) return;
+      var data = snapshot.val();
+      if (!data) { hideSplash(); return; }
+      try { window.__loadStateFromCloud(data); }
+      catch(e) { console.error(e); hideSplash(); }
+    });
+
+    window.__saveToCloud = function(state) {
+      if (!window.__firebaseReady) return;
+      window.__isSyncing = true;
+      dbRef.set(state)
+        .then(function() { setTimeout(function(){ window.__isSyncing = false; }, 500); })
+        .catch(function(e) { console.error(e); window.__isSyncing = false; });
+    };
+
+    updateSyncStatus('connected');
+  } catch(e) {
+    console.error('Firebase erro:', e);
+    updateSyncStatus('error');
+  }
+})();
+</script>
+
 </body>
 </html>
