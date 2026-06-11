@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Copa GR — Temporada 2025</title>
+<title>Copa GR — Temporada 2026</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <!-- Firebase compat SDKs -->
@@ -737,6 +737,164 @@ body::before{
 .loading-fill{height:100%;background:var(--gold);animation:loadBar 1.5s ease infinite;}
 @keyframes loadBar{0%{width:0%;margin-left:0}60%{width:100%;margin-left:0}100%{width:0%;margin-left:100%}}
 .loading-text{font-family:var(--font2);font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted2);}
+
+/* ── SORTEIO ── */
+.sorteio-overlay{
+  position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.97);
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  gap:0;
+}
+.sorteio-overlay.open{display:flex;}
+.sorteio-bg-pulse{
+  position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 60% 40% at 50% 50%, rgba(212,168,71,.04) 0%, transparent 70%);
+  animation:srtPulse 2s ease infinite;
+}
+@keyframes srtPulse{0%,100%{opacity:.5;transform:scale(1);}50%{opacity:1;transform:scale(1.08);}}
+
+.sorteio-header{
+  position:relative;z-index:1;text-align:center;margin-bottom:2rem;
+}
+.sorteio-label{
+  font-family:var(--font2);font-size:.62rem;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--gold3);margin-bottom:.35rem;
+}
+.sorteio-title{
+  font-family:var(--font2);font-size:1.8rem;font-weight:800;
+  letter-spacing:.06em;color:var(--gold2);
+}
+
+/* slot machine drum */
+.sorteio-stage{
+  position:relative;z-index:1;
+  display:flex;flex-direction:column;align-items:center;gap:1.5rem;
+  width:min(480px,92vw);
+}
+
+/* current seller name */
+.sorteio-seller-name{
+  font-family:var(--font2);font-size:1.1rem;font-weight:700;
+  color:var(--text);letter-spacing:.04em;
+  min-height:1.6rem;text-align:center;
+  transition:opacity .2s;
+}
+.sorteio-seller-avatar{
+  width:52px;height:52px;border-radius:50%;
+  border:2px solid var(--gold3);background:var(--s3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.5rem;overflow:hidden;margin-bottom:.25rem;
+  transition:border-color .3s;
+}
+.sorteio-seller-avatar.winner{border-color:var(--gold2);box-shadow:0 0 20px var(--gold-glow);}
+.sorteio-seller-avatar img{width:100%;height:100%;object-fit:cover;}
+
+/* drum window */
+.sorteio-drum-wrap{
+  position:relative;width:280px;height:110px;
+  border:1px solid var(--bd2);border-radius:12px;
+  overflow:hidden;background:var(--s2);
+}
+.sorteio-drum-wrap::before,
+.sorteio-drum-wrap::after{
+  content:'';position:absolute;left:0;right:0;height:36px;z-index:2;pointer-events:none;
+}
+.sorteio-drum-wrap::before{top:0;background:linear-gradient(180deg,var(--s2),transparent);}
+.sorteio-drum-wrap::after{bottom:0;background:linear-gradient(0deg,var(--s2),transparent);}
+.sorteio-drum-highlight{
+  position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);
+  height:40px;border-top:1px solid var(--gold3);border-bottom:1px solid var(--gold3);
+  background:rgba(212,168,71,.05);z-index:1;pointer-events:none;
+}
+.sorteio-drum{
+  display:flex;flex-direction:column;align-items:center;
+  position:absolute;width:100%;
+  transition:transform 0s;
+}
+.sorteio-drum-item{
+  height:36px;display:flex;align-items:center;justify-content:center;
+  gap:.6rem;font-family:var(--font2);font-size:.9rem;font-weight:600;
+  color:var(--muted2);flex-shrink:0;width:100%;padding:0 1rem;
+  white-space:nowrap;
+}
+.sorteio-drum-item.center{color:var(--gold2);font-size:1rem;}
+.sorteio-drum-item img{width:22px;height:15px;border-radius:2px;object-fit:cover;}
+
+/* result revealed */
+.sorteio-result-wrap{
+  display:none;flex-direction:column;align-items:center;gap:.5rem;
+  animation:srtReveal .4s ease;
+}
+@keyframes srtReveal{from{opacity:0;transform:scale(.85);}to{opacity:1;transform:scale(1);}}
+.sorteio-result-flag{font-size:3.5rem;line-height:1;}
+.sorteio-result-flag img{width:72px;height:48px;border-radius:6px;object-fit:cover;box-shadow:0 4px 20px rgba(0,0,0,.5);}
+.sorteio-result-country{
+  font-family:var(--font2);font-size:1.5rem;font-weight:800;
+  color:var(--gold2);letter-spacing:.04em;
+}
+.sorteio-result-assign{
+  font-size:.7rem;letter-spacing:.08em;color:var(--muted2);text-transform:uppercase;
+}
+
+/* queue list */
+.sorteio-queue{
+  width:100%;max-height:140px;overflow-y:auto;scrollbar-width:thin;
+  display:flex;flex-direction:column;gap:3px;
+}
+.sorteio-queue-item{
+  display:flex;align-items:center;gap:.6rem;
+  padding:.4rem .65rem;border-radius:6px;
+  background:var(--s2);border:1px solid var(--bd);
+  font-size:.78rem;transition:all .2s;
+}
+.sorteio-queue-item.done{
+  background:rgba(52,211,153,.05);border-color:rgba(52,211,153,.15);
+  opacity:.6;
+}
+.sorteio-queue-item.current{
+  border-color:var(--gold);background:rgba(212,168,71,.06);
+}
+.sorteio-queue-item.pending{opacity:.4;}
+.sqi-avatar{width:22px;height:22px;border-radius:50%;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:.75rem;overflow:hidden;flex-shrink:0;}
+.sqi-avatar img{width:100%;height:100%;object-fit:cover;}
+.sqi-name{flex:1;font-weight:500;color:var(--text);}
+.sqi-flag{display:flex;align-items:center;font-size:.8rem;margin-left:auto;gap:.3rem;}
+.sqi-flag img{width:18px;height:12px;border-radius:2px;}
+
+/* controls */
+.sorteio-controls{
+  display:flex;gap:.6rem;position:relative;z-index:1;
+  margin-top:.5rem;
+}
+.sorteio-spinning{
+  display:none;align-items:center;gap:.5rem;
+  font-family:var(--font2);font-size:.65rem;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--gold3);
+}
+.sorteio-spinning.show{display:flex;}
+.spin-dot{width:5px;height:5px;border-radius:50%;background:var(--gold);animation:spinDot .6s ease infinite;}
+.spin-dot:nth-child(2){animation-delay:.15s;}
+.spin-dot:nth-child(3){animation-delay:.3s;}
+@keyframes spinDot{0%,100%{opacity:.2;transform:scale(.7);}50%{opacity:1;transform:scale(1);}}
+
+/* assign list */
+.sorteio-assigns{
+  width:100%;display:grid;grid-template-columns:1fr 1fr;gap:.4rem;
+  max-height:160px;overflow-y:auto;scrollbar-width:thin;
+}
+.sorteio-assign-card{
+  display:flex;align-items:center;gap:.5rem;
+  padding:.5rem .65rem;border-radius:8px;
+  background:var(--s2);border:1px solid var(--bd);
+  animation:srtReveal .35s ease;
+}
+.sac-avatar{width:26px;height:26px;border-radius:50%;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:.85rem;overflow:hidden;flex-shrink:0;}
+.sac-avatar img{width:100%;height:100%;object-fit:cover;}
+.sac-info{flex:1;min-width:0;}
+.sac-name{font-size:.72rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sac-country{font-size:.6rem;color:var(--muted2);}
+.sac-flag{flex-shrink:0;}
+.sac-flag img{width:20px;height:14px;border-radius:2px;}
+
 </style>
 </head>
 <body>
@@ -767,7 +925,7 @@ body::before{
   <div class="header-divider"></div>
   <div>
     <div class="header-title">Copa GR</div>
-    <div class="header-sub">Torneio · 2025</div>
+    <div class="header-sub">Torneio · 2026</div>
   </div>
   <div class="header-stats">
     <div class="hstat"><div class="hstat-n" id="stat-total">0</div><div class="hstat-l">Total</div></div>
@@ -893,6 +1051,7 @@ body::before{
   <div class="panel" id="panel-sellers">
     <div class="sellers-ctrl">
       <button class="btn btn-primary" onclick="toggleAddForm()">+ Adicionar</button>
+      <button class="btn btn-outline" onclick="openSorteio()" style="border-color:rgba(212,168,71,.4);color:var(--gold2);">&#9670; Sortear Países</button>
       <button class="btn btn-danger" onclick="resetCopa()">Reiniciar</button>
       <button class="btn btn-danger" style="opacity:.5;font-size:.6rem;" onclick="resetAll()">Apagar Tudo</button>
     </div>
@@ -2235,6 +2394,287 @@ async function resetAll(){
   renderGroups();renderBracket();renderSellers();updateStats();saveState();
 }
 
+// ══════════════════════════════════════════════════════════════
+// SORTEIO DE PAÍSES
+// ══════════════════════════════════════════════════════════════
+const SORTEIO_PAISES = [
+  {name:'Brasil',      code:'br'}, {name:'Argentina',    code:'ar'},
+  {name:'França',      code:'fr'}, {name:'Alemanha',     code:'de'},
+  {name:'Espanha',     code:'es'}, {name:'Portugal',     code:'pt'},
+  {name:'Itália',      code:'it'}, {name:'Inglaterra',   code:'gb'},
+  {name:'Holanda',     code:'nl'}, {name:'Bélgica',      code:'be'},
+  {name:'Croácia',     code:'hr'}, {name:'Uruguai',      code:'uy'},
+  {name:'México',      code:'mx'}, {name:'EUA',          code:'us'},
+  {name:'Japão',       code:'jp'}, {name:'Coreia do Sul',code:'kr'},
+  {name:'Marrocos',    code:'ma'}, {name:'Senegal',      code:'sn'},
+  {name:'Polônia',     code:'pl'}, {name:'Suíça',        code:'ch'},
+  {name:'Dinamarca',   code:'dk'}, {name:'Suécia',       code:'se'},
+  {name:'Austrália',   code:'au'}, {name:'Canadá',       code:'ca'},
+  {name:'Colômbia',    code:'co'}, {name:'Chile',        code:'cl'},
+  {name:'Peru',        code:'pe'}, {name:'Equador',      code:'ec'},
+  {name:'Turquia',     code:'tr'}, {name:'Ucrânia',      code:'ua'},
+  {name:'Grécia',      code:'gr'}, {name:'Áustria',      code:'at'},
+  {name:'Noruega',     code:'no'}, {name:'Irlanda',      code:'ie'},
+  {name:'Nigéria',     code:'ng'}, {name:'Egito',        code:'eg'},
+  {name:'Camarões',    code:'cm'}, {name:'Gana',         code:'gh'},
+  {name:'Costa do Marfim',code:'ci'},{name:'Tunísia',    code:'tn'},
+  {name:'China',       code:'cn'}, {name:'Irã',          code:'ir'},
+  {name:'Arábia Saudita',code:'sa'},{name:'Qatar',       code:'qa'},
+  {name:'México',      code:'mx'}, {name:'Costa Rica',   code:'cr'},
+  {name:'Venezuela',   code:'ve'}, {name:'Bolívia',      code:'bo'},
+  {name:'Paraguai',    code:'py'}, {name:'Rússia',       code:'ru'},
+];
+
+function flagImg(code, w=22, h=15){
+  return `<img src="https://flagcdn.com/w40/${code}.png" width="${w}" height="${h}" style="border-radius:2px;object-fit:cover;" alt="${code.toUpperCase()}">`;
+}
+
+let srtQueue    = [];   // sellers restantes para sortear
+let srtDone     = [];   // [{seller, pais}]
+let srtPool     = [];   // países embaralhados disponíveis
+let srtCurrent  = null; // seller atual
+let srtSpinTimer= null;
+let srtIsRunning= false;
+
+function openSorteio(){
+  srtReset();
+  document.getElementById('sorteioOverlay').classList.add('open');
+}
+function closeSorteio(){
+  document.getElementById('sorteioOverlay').classList.remove('open');
+  if(srtSpinTimer){ clearInterval(srtSpinTimer); srtSpinTimer=null; }
+  srtIsRunning=false;
+}
+
+function srtReset(){
+  if(srtSpinTimer){ clearInterval(srtSpinTimer); srtSpinTimer=null; }
+  srtIsRunning=false;
+
+  // Queue = todos os sellers ativos, embaralhados
+  srtQueue = shuffle(sellers.filter(s=>s.status!=='eliminated').map(s=>({...s})));
+  srtDone  = [];
+
+  // Pool de países — embaralha e garante que tem pelo menos N países
+  const pool = shuffle([...SORTEIO_PAISES]);
+  // Se sellers > países únicos, repete o pool
+  while(pool.length < srtQueue.length) pool.push(...shuffle([...SORTEIO_PAISES]));
+  srtPool = pool;
+
+  srtCurrent = null;
+
+  // UI reset
+  document.getElementById('srtResult').style.display='none';
+  document.getElementById('srtAssignWrap').style.display='none';
+  document.getElementById('srtDrumWrap').style.display='block';
+  document.getElementById('srtBtnStart').style.display='';
+  document.getElementById('srtBtnStart').textContent='Iniciar Sorteio';
+  document.getElementById('srtBtnStart').disabled=false;
+  document.getElementById('srtSpinning').classList.remove('show');
+  document.getElementById('srtSellerName').textContent='Aguardando…';
+  document.getElementById('srtAvatar').innerHTML='?';
+  document.getElementById('srtAvatar').classList.remove('winner');
+  document.getElementById('srtAssigns').innerHTML='';
+  document.getElementById('srtDrum').innerHTML='';
+  srtBuildDrum(null);
+}
+
+function srtBuildDrum(centerPais){
+  // preenche o tambor com itens aleatórios + o central
+  const drum = document.getElementById('srtDrum');
+  const items = [];
+  const pool2 = shuffle([...SORTEIO_PAISES]);
+
+  // 3 acima do centro, o centro, 3 abaixo
+  for(let i=0;i<3;i++) items.push(pool2[i % pool2.length]);
+  items.push(centerPais || pool2[3]);
+  for(let i=4;i<7;i++) items.push(pool2[i % pool2.length]);
+
+  drum.innerHTML = items.map((p,i)=>`
+    <div class="sorteio-drum-item ${i===3?'center':''}">
+      ${p ? flagImg(p.code) : ''} ${p ? p.name : '—'}
+    </div>`).join('');
+
+  // position so center item is in the middle of the 110px window
+  // each item = 36px, center = index 3 → offset = -(3*36) + (110/2 - 18) = -108+37=-71
+  drum.style.transform = `translateY(-71px)`;
+}
+
+function srtNext(){
+  if(srtIsRunning) return;
+
+  // Se acabou a queue, mostra resultado final
+  if(srtQueue.length === 0){
+    srtShowFinalResult();
+    return;
+  }
+
+  srtIsRunning=true;
+  srtCurrent = srtQueue.shift();
+  const paisSorteado = srtPool.shift();
+
+  // Atualiza seller exibido
+  const av = document.getElementById('srtAvatar');
+  av.classList.remove('winner');
+  if(srtCurrent.photo){
+    av.innerHTML=`<img src="${srtCurrent.photo}">`;
+  } else {
+    av.innerHTML = srtCurrent.flag || srtCurrent.name[0];
+  }
+  document.getElementById('srtSellerName').textContent = srtCurrent.name;
+
+  // Esconde resultado anterior
+  const resWrap = document.getElementById('srtResult');
+  resWrap.style.display='none';
+
+  // Mostra tambor
+  document.getElementById('srtDrumWrap').style.display='block';
+  document.getElementById('srtBtnStart').style.display='none';
+  document.getElementById('srtSpinning').classList.add('show');
+
+  // ── Animação do tambor ──────────────────────────────────────
+  // Fase 1: gira rápido (itens aleatórios)
+  // Fase 2: desacelera até parar no país sorteado
+  const drum = document.getElementById('srtDrum');
+  const ITEM_H = 36;
+  const WINDOW_MID = 37; // px from top to center of highlight (110/2 - 18)
+
+  // Cria lista longa de itens: muitos aleatórios + desacelera + país sorteado no centro
+  const spinPool = shuffle([...SORTEIO_PAISES,...SORTEIO_PAISES,...SORTEIO_PAISES]);
+  const totalSpin = 28; // quantos itens rolam antes de parar
+  const allItems  = [];
+  for(let i=0;i<totalSpin;i++) allItems.push(spinPool[i % spinPool.length]);
+  // os últimos 3 antes do alvo + alvo + 3 depois
+  allItems.push(...shuffle([...SORTEIO_PAISES]).slice(0,3));
+  allItems.push(paisSorteado);
+  allItems.push(...shuffle([...SORTEIO_PAISES]).slice(0,3));
+
+  const centerIdx = totalSpin + 3; // índice do paisSorteado na lista
+
+  // Renderiza todos os itens
+  drum.style.transition = 'none';
+  drum.innerHTML = allItems.map((p,i)=>`
+    <div class="sorteio-drum-item ${i===centerIdx?'center':''}">
+      ${flagImg(p.code)} ${p.name}
+    </div>`).join('');
+
+  // Posição inicial: mostra primeiros itens
+  const startY = -WINDOW_MID; // item 0 no centro
+  drum.style.transform = `translateY(${startY}px)`;
+
+  // Posição alvo: centerIdx no centro
+  const targetY = -(centerIdx * ITEM_H) + WINDOW_MID;
+
+  // Animação: múltiplos passos com easing progressivo
+  let startTime = null;
+  const TOTAL_DURATION = 3200; // ms
+
+  function easeOut(t){ return 1 - Math.pow(1-t, 3); }
+
+  function animateDrum(ts){
+    if(!startTime) startTime = ts;
+    const elapsed = ts - startTime;
+    const t = Math.min(elapsed / TOTAL_DURATION, 1);
+    const eased = easeOut(t);
+
+    const currentY = startY + (targetY - startY) * eased;
+    drum.style.transform = `translateY(${currentY}px)`;
+
+    if(t < 1){
+      requestAnimationFrame(animateDrum);
+    } else {
+      // Parou — revela resultado
+      drum.style.transform = `translateY(${targetY}px)`;
+      srtReveal(paisSorteado);
+    }
+  }
+
+  requestAnimationFrame(animateDrum);
+}
+
+function srtReveal(pais){
+  srtIsRunning = false;
+  document.getElementById('srtSpinning').classList.remove('show');
+  document.getElementById('srtDrumWrap').style.display='none';
+
+  // Marca avatar como winner
+  document.getElementById('srtAvatar').classList.add('winner');
+
+  // Mostra resultado
+  const resWrap = document.getElementById('srtResult');
+  resWrap.style.display = 'flex';
+  document.getElementById('srtResultFlag').innerHTML = flagImg(pais.code, 72, 48);
+  document.getElementById('srtResultCountry').textContent = pais.name;
+  document.getElementById('srtResultAssign').textContent = `sorteado para ${srtCurrent.name}`;
+
+  // Adiciona à lista de concluídos
+  srtDone.push({seller: srtCurrent, pais});
+
+  // Botão próximo
+  const btn = document.getElementById('srtBtnStart');
+  btn.style.display = '';
+  btn.disabled = false;
+
+  if(srtQueue.length > 0){
+    btn.textContent = `Próximo: ${srtQueue[0].name} ›`;
+    btn.onclick = srtNext;
+  } else {
+    btn.textContent = 'Ver Resultado Final';
+    btn.onclick = srtShowFinalResult;
+  }
+}
+
+function srtShowFinalResult(){
+  if(srtSpinTimer){ clearInterval(srtSpinTimer); srtSpinTimer=null; }
+
+  document.getElementById('srtResult').style.display='none';
+  document.getElementById('srtDrumWrap').style.display='none';
+  document.getElementById('srtBtnStart').style.display='none';
+  document.getElementById('srtSpinning').classList.remove('show');
+  document.getElementById('srtSellerName').textContent='Sorteio Concluído!';
+  document.getElementById('srtAvatar').innerHTML='✓';
+  document.getElementById('srtAvatar').classList.add('winner');
+
+  // Monta cards de resultado
+  const assigns = document.getElementById('srtAssigns');
+  assigns.innerHTML = srtDone.map(({seller,pais})=>`
+    <div class="sorteio-assign-card">
+      <div class="sac-avatar">${seller.photo?`<img src="${seller.photo}">`:(seller.flag||seller.name[0])}</div>
+      <div class="sac-info">
+        <div class="sac-name">${seller.name}</div>
+        <div class="sac-country">${pais.name}</div>
+      </div>
+      <div class="sac-flag">${flagImg(pais.code,20,14)}</div>
+    </div>`).join('');
+
+  document.getElementById('srtAssignWrap').style.display='block';
+}
+
+function srtApplyAll(){
+  // Aplica o país sorteado como flag/country de cada seller
+  srtDone.forEach(({seller,pais})=>{
+    const s = sellers.find(x=>x.id===seller.id);
+    if(!s) return;
+    s.country = pais.name;
+    s.flag    = flagImg(pais.code);
+    // atualiza nos rounds e grupos também
+    allRounds.forEach(round=>round.forEach(m=>{
+      if(m.a&&m.a.id===s.id){m.a.country=s.country;m.a.flag=s.flag;}
+      if(m.b&&m.b.id===s.id){m.b.country=s.country;m.b.flag=s.flag;}
+      if(m.winner&&m.winner.id===s.id){m.winner.country=s.country;m.winner.flag=s.flag;}
+    }));
+    groups.forEach(g=>{
+      g.players.forEach(p=>{if(p.id===s.id){p.country=s.country;p.flag=s.flag;}});
+      g.matches.forEach(m=>{
+        if(m.a&&m.a.id===s.id){m.a.country=s.country;m.a.flag=s.flag;}
+        if(m.b&&m.b.id===s.id){m.b.country=s.country;m.b.flag=s.flag;}
+        if(m.winner&&m.winner.id===s.id){m.winner.country=s.country;m.winner.flag=s.flag;}
+      });
+    });
+  });
+  renderSellers();renderSidebar();renderBracket();renderGroups();updateStats();saveState();
+  closeSorteio();
+}
+
 // ══ CLOUD SYNC ══
 function getState(){
   return{
@@ -2302,6 +2742,57 @@ function hideSplash(){const s=document.getElementById('loadingSplash');if(s)s.st
   setTimeout(()=>{hideSplash();renderSellers();updateStats();renderGroups();},2000);
 })();
 </script>
+
+<!-- SORTEIO DE PAÍSES -->
+<div class="sorteio-overlay" id="sorteioOverlay">
+  <div class="sorteio-bg-pulse"></div>
+
+  <div class="sorteio-header">
+    <div class="sorteio-label">Copa GR · 2026</div>
+    <div class="sorteio-title">Sorteio de Países</div>
+  </div>
+
+  <div class="sorteio-stage">
+
+    <!-- seller atual -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:.3rem;">
+      <div class="sorteio-seller-avatar" id="srtAvatar">?</div>
+      <div class="sorteio-seller-name" id="srtSellerName">Aguardando…</div>
+    </div>
+
+    <!-- tambor / slot machine -->
+    <div id="srtDrumWrap" class="sorteio-drum-wrap">
+      <div class="sorteio-drum-highlight"></div>
+      <div class="sorteio-drum" id="srtDrum"></div>
+    </div>
+
+    <!-- resultado revelado -->
+    <div class="sorteio-result-wrap" id="srtResult">
+      <div class="sorteio-result-flag" id="srtResultFlag"></div>
+      <div class="sorteio-result-country" id="srtResultCountry"></div>
+      <div class="sorteio-result-assign" id="srtResultAssign"></div>
+    </div>
+
+    <!-- controles -->
+    <div class="sorteio-controls">
+      <button class="btn btn-primary" id="srtBtnStart" onclick="srtNext()" style="min-width:140px;justify-content:center;">Iniciar Sorteio</button>
+      <div class="sorteio-spinning" id="srtSpinning"><span class="spin-dot"></span><span class="spin-dot"></span><span class="spin-dot"></span><span style="margin-left:2px;">Sorteando…</span></div>
+      <button class="btn btn-ghost" onclick="closeSorteio()" style="font-size:.65rem;">Fechar</button>
+    </div>
+
+    <!-- assigns concluídos -->
+    <div id="srtAssignWrap" style="width:100%;display:none;">
+      <div style="font-family:var(--font2);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--gold3);margin-bottom:.5rem;text-align:center;">Resultado do Sorteio</div>
+      <div class="sorteio-assigns" id="srtAssigns"></div>
+      <div style="display:flex;gap:.5rem;justify-content:center;margin-top:.75rem;">
+        <button class="btn btn-primary" onclick="srtApplyAll()" style="justify-content:center;">Aplicar aos participantes</button>
+        <button class="btn btn-ghost" onclick="srtReset()" style="font-size:.65rem;">Refazer</button>
+        <button class="btn btn-ghost" onclick="closeSorteio()" style="font-size:.65rem;">Fechar</button>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 <!-- ═══ FIREBASE INIT — after SDKs are guaranteed loaded ═══ -->
 <script>
