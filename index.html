@@ -2532,57 +2532,79 @@ function srtNext(){
   document.getElementById('srtSpinning').classList.add('show');
 
   // ── Animação do tambor ──────────────────────────────────────
-  // Fase 1: gira rápido (itens aleatórios)
-  // Fase 2: desacelera até parar no país sorteado
   const drum = document.getElementById('srtDrum');
-  const ITEM_H = 36;
-  const WINDOW_MID = 37; // px from top to center of highlight (110/2 - 18)
+  const ITEM_H  = 36;
+  // janela tem 110px; o highlight fica em top=35px (height 40px) → centro do highlight = 55px
+  // para colocar o item no centro: translateY = -(idx * ITEM_H) + (55 - ITEM_H/2)
+  const CENTER_OFFSET = 55 - ITEM_H / 2; // = 37
 
-  // Cria lista longa de itens: muitos aleatórios + desacelera + país sorteado no centro
+  // Monta fita: 40 itens aleatórios + 3 neutros + paisSorteado + 3 neutros
+  // Garante que os 3 vizinhos não sejam o mesmo que o alvo
   const spinPool = shuffle([...SORTEIO_PAISES,...SORTEIO_PAISES,...SORTEIO_PAISES]);
-  const totalSpin = 28; // quantos itens rolam antes de parar
-  const allItems  = [];
-  for(let i=0;i<totalSpin;i++) allItems.push(spinPool[i % spinPool.length]);
-  // os últimos 3 antes do alvo + alvo + 3 depois
-  allItems.push(...shuffle([...SORTEIO_PAISES]).slice(0,3));
-  allItems.push(paisSorteado);
-  allItems.push(...shuffle([...SORTEIO_PAISES]).slice(0,3));
+  const allItems = [];
+  for(let i=0;i<40;i++) allItems.push(spinPool[i % spinPool.length]);
+  // 3 itens antes — excluindo o alvo
+  const before = shuffle(SORTEIO_PAISES.filter(p=>p.code!==paisSorteado.code)).slice(0,3);
+  const after  = shuffle(SORTEIO_PAISES.filter(p=>p.code!==paisSorteado.code)).slice(0,3);
+  allItems.push(...before);
+  allItems.push(paisSorteado);   // ← alvo exato
+  allItems.push(...after);
 
-  const centerIdx = totalSpin + 3; // índice do paisSorteado na lista
+  const centerIdx = 40 + 3; // = 43
 
-  // Renderiza todos os itens
   drum.style.transition = 'none';
   drum.innerHTML = allItems.map((p,i)=>`
     <div class="sorteio-drum-item ${i===centerIdx?'center':''}">
       ${flagImg(p.code)} ${p.name}
     </div>`).join('');
 
-  // Posição inicial: mostra primeiros itens
-  const startY = -WINDOW_MID; // item 0 no centro
+  // começa com item 0 visível no topo — translateY=0 → item 0 no topo da div
+  // para item 0 no centro: translateY = CENTER_OFFSET
+  const startY  = CENTER_OFFSET;                          // item 0 centrado
+  const targetY = -(centerIdx * ITEM_H) + CENTER_OFFSET; // alvo centrado
+
   drum.style.transform = `translateY(${startY}px)`;
 
-  // Posição alvo: centerIdx no centro
-  const targetY = -(centerIdx * ITEM_H) + WINDOW_MID;
+  // força reflow para garantir que transition:none aplicou
+  drum.getBoundingClientRect();
 
-  // Animação: múltiplos passos com easing progressivo
   let startTime = null;
-  const TOTAL_DURATION = 3200; // ms
+  // duração maior = suspense maior; 3 fases: aceleração, velocidade máx, desaceleração
+  const DURATION = 3800;
 
-  function easeOut(t){ return 1 - Math.pow(1-t, 3); }
+  function easeInOutCubic(t){
+    // começa rápido, desacelera no final
+    return t < 0.7
+      ? t / 0.7  // linear até 70%
+      : 1 - Math.pow((t - 0.7) / 0.3, 2); // ease-out nos últimos 30%
+  }
+
+  // garante que o tambor percorre distância suficiente (sempre rola para frente)
+  // startY > targetY (rola para cima), diferença = startY - targetY
+  const totalDist = startY - targetY; // positivo: rola pra cima
 
   function animateDrum(ts){
     if(!startTime) startTime = ts;
     const elapsed = ts - startTime;
-    const t = Math.min(elapsed / TOTAL_DURATION, 1);
-    const eased = easeOut(t);
+    const t = Math.min(elapsed / DURATION, 1);
 
-    const currentY = startY + (targetY - startY) * eased;
-    drum.style.transform = `translateY(${currentY}px)`;
+    // easing: começa devagar, acelera, desacelera no fim
+    let eased;
+    if(t < 0.1){
+      eased = (t/0.1) * 0.1 * 0.3; // arranca devagar
+    } else if(t < 0.7){
+      eased = 0.03 + ((t-0.1)/0.6) * 0.67; // acelera linearmente
+    } else {
+      const sub = (t - 0.7) / 0.3;
+      eased = 0.7 - Math.pow(sub-1, 3) * 0.3; // desacelera suavemente
+    }
+    eased = Math.min(eased, 1);
+
+    drum.style.transform = `translateY(${startY - totalDist * eased}px)`;
 
     if(t < 1){
       requestAnimationFrame(animateDrum);
     } else {
-      // Parou — revela resultado
       drum.style.transform = `translateY(${targetY}px)`;
       srtReveal(paisSorteado);
     }
