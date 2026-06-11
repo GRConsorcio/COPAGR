@@ -2437,7 +2437,15 @@ let srtSpinTimer= null;
 let srtIsRunning= false;
 
 function openSorteio(){
+  const ativos = sellers.filter(s=>s.status!=='eliminated');
+  if(ativos.length === 0){
+    alert('Nenhum participante cadastrado!');
+    return;
+  }
   srtReset();
+  // Atualiza contador no header do sorteio
+  const lbl = document.getElementById('srtQueueCount');
+  if(lbl) lbl.textContent = ativos.length + ' participante' + (ativos.length!==1?'s':'');
   document.getElementById('sorteioOverlay').classList.add('open');
 }
 function closeSorteio(){
@@ -2496,7 +2504,7 @@ function srtBuildDrum(centerPais){
 
   // position so center item is in the middle of the 110px window
   // each item = 36px, center = index 3 → offset = -(3*36) + (110/2 - 18) = -108+37=-71
-  drum.style.transform = `translateY(-71px)`;
+  drum.style.transform = `translateY(-${3*36 - 37}px)`; // item 3 centralizado: -(3*36)+37 = -71
 }
 
 function srtNext(){
@@ -2626,7 +2634,7 @@ function srtReveal(pais){
   resWrap.style.display = 'flex';
   document.getElementById('srtResultFlag').innerHTML = flagImg(pais.code, 72, 48);
   document.getElementById('srtResultCountry').textContent = pais.name;
-  document.getElementById('srtResultAssign').textContent = `sorteado para ${srtCurrent.name}`;
+  document.getElementById('srtResultAssign').textContent = `sorteado para ${srtCurrent.name} · ${srtDone.length+1} de ${srtDone.length+1+srtQueue.length}`;
 
   // Adiciona à lista de concluídos
   srtDone.push({seller: srtCurrent, pais});
@@ -2672,28 +2680,43 @@ function srtShowFinalResult(){
 }
 
 function srtApplyAll(){
-  // Aplica o país sorteado como flag/country de cada seller
+  if(!srtDone.length){ closeSorteio(); return; }
+
+  // Bloqueia o listener do Firebase temporariamente para não sobrescrever com estado antigo
+  window.__isSyncing = true;
+
   srtDone.forEach(({seller,pais})=>{
-    const s = sellers.find(x=>x.id===seller.id);
-    if(!s) return;
+    // busca pelo id — mas também pelo nome como fallback (caso id tenha mudado)
+    let s = sellers.find(x=>x.id===seller.id);
+    if(!s) s = sellers.find(x=>x.name===seller.name);
+    if(!s){ console.warn('srtApplyAll: seller não encontrado', seller); return; }
+
+    const flagHtml = `<img src="https://flagcdn.com/w40/${pais.code}.png" width="22" height="15" style="border-radius:2px;object-fit:cover;" alt="${pais.code.toUpperCase()}">`;
+
     s.country = pais.name;
-    s.flag    = flagImg(pais.code);
-    // atualiza nos rounds e grupos também
+    s.flag    = flagHtml;
+
+    // propaga para rounds e grupos
+    function patchPlayer(p){
+      if(!p||p.id!==s.id) return;
+      p.country = s.country;
+      p.flag    = s.flag;
+    }
     allRounds.forEach(round=>round.forEach(m=>{
-      if(m.a&&m.a.id===s.id){m.a.country=s.country;m.a.flag=s.flag;}
-      if(m.b&&m.b.id===s.id){m.b.country=s.country;m.b.flag=s.flag;}
-      if(m.winner&&m.winner.id===s.id){m.winner.country=s.country;m.winner.flag=s.flag;}
+      patchPlayer(m.a); patchPlayer(m.b); patchPlayer(m.winner);
     }));
     groups.forEach(g=>{
-      g.players.forEach(p=>{if(p.id===s.id){p.country=s.country;p.flag=s.flag;}});
-      g.matches.forEach(m=>{
-        if(m.a&&m.a.id===s.id){m.a.country=s.country;m.a.flag=s.flag;}
-        if(m.b&&m.b.id===s.id){m.b.country=s.country;m.b.flag=s.flag;}
-        if(m.winner&&m.winner.id===s.id){m.winner.country=s.country;m.winner.flag=s.flag;}
-      });
+      g.players.forEach(p=>patchPlayer(p));
+      g.matches.forEach(m=>{ patchPlayer(m.a); patchPlayer(m.b); patchPlayer(m.winner); });
     });
   });
-  renderSellers();renderSidebar();renderBracket();renderGroups();updateStats();saveState();
+
+  renderSellers();renderSidebar();renderBracket();renderGroups();updateStats();
+
+  // Salva e só então libera o listener (evita race condition com Firebase)
+  saveState();
+  setTimeout(()=>{ window.__isSyncing = false; }, 1500);
+
   closeSorteio();
 }
 
@@ -2771,6 +2794,7 @@ function hideSplash(){const s=document.getElementById('loadingSplash');if(s)s.st
 
   <div class="sorteio-header">
     <div class="sorteio-label">Copa GR · 2026</div>
+    <div id="srtQueueCount" style="font-family:var(--font2);font-size:.62rem;letter-spacing:.1em;color:var(--muted2);margin-top:.2rem;"></div>
     <div class="sorteio-title">Sorteio de Países</div>
   </div>
 
