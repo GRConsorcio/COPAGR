@@ -2748,14 +2748,36 @@ function getState(){
     ts:Date.now()
   };
 }
+// ══ MIGRAÇÃO: converte emojis de bandeira → <img flagcdn> ══
+// Necessário para TVs que renderizam emojis com cores erradas (ex: LG)
+const EMOJI_FLAG_MAP={
+  '🇧🇷':'br','🇵🇹':'pt','🇪🇸':'es','🇦🇷':'ar','🇲🇽':'mx','🇮🇹':'it',
+  '🇫🇷':'fr','🇩🇪':'de','🇯🇵':'jp','🇺🇸':'us','🇬🇧':'gb','🇨🇳':'cn',
+  '🇷🇺':'ru','🇨🇦':'ca','🇦🇺':'au','🇳🇱':'nl','🇧🇪':'be','🇵🇱':'pl',
+  '🇸🇪':'se','🇩🇰':'dk','🇳🇴':'no','🇹🇷':'tr','🇨🇱':'cl','🇨🇴':'co',
+  '🇺🇾':'uy','🇭🇷':'hr','🇨🇿':'cz','🇺🇦':'ua','🇬🇷':'gr','🇷🇴':'ro',
+  '🇨🇭':'ch','🇦🇹':'at','🇫🇮':'fi','🇮🇪':'ie','🇵🇪':'pe','🇪🇨':'ec',
+  '🇰🇷':'kr','🇮🇳':'in','🇿🇦':'za','🇳🇬':'ng','🇪🇬':'eg','🇲🇦':'ma',
+  '🇸🇳':'sn','🇶🇦':'qa','🇸🇦':'sa','🇮🇷':'ir','🇹🇭':'th','🇳🇿':'nz',
+  '🇨🇺':'cu','🇻🇪':'ve','🇵🇾':'py','🇧🇴':'bo',
+};
+function migrateFlag(flag){
+  if(!flag||flag.startsWith('<img'))return flag;
+  const code=EMOJI_FLAG_MAP[flag];
+  if(code) return '<img src="https://flagcdn.com/w20/'+code+'.png" width="16" height="11" style="border-radius:1px;" alt="'+code.toUpperCase()+'">';
+  return flag;
+}
+function migratePlayer(p){return p?{...p,flag:migrateFlag(p.flag)}:null;}
+function migrateMatch(m){return{...m,a:migratePlayer(m.a),b:migratePlayer(m.b),winner:migratePlayer(m.winner)};}
+
 function applyState(data){
   if(!data||!data.sellers)return false;
-  sellers=data.sellers.map(s=>({...s}));
-  allRounds=(data.allRounds||[]).map(round=>round.map(m=>({a:m.a?{...m.a}:null,b:m.b?{...m.b}:null,winner:m.winner?{...m.winner}:null,draw:m.draw||false,bye:m.bye||false,roundIdx:m.roundIdx||0,scoreA:m.scoreA||0,scoreB:m.scoreB||0})));
+  sellers=data.sellers.map(s=>({...s,flag:migrateFlag(s.flag)}));
+  allRounds=(data.allRounds||[]).map(round=>round.map(m=>migrateMatch({a:m.a?{...m.a}:null,b:m.b?{...m.b}:null,winner:m.winner?{...m.winner}:null,draw:m.draw||false,bye:m.bye||false,roundIdx:m.roundIdx||0,scoreA:m.scoreA||0,scoreB:m.scoreB||0})));
   groups=(data.groups||[]).map(g=>({
     letter:g.letter,color:g.color,
-    players:(g.players||[]).map(p=>({...p})),
-    matches:(g.matches||[]).map(m=>({a:m.a?{...m.a}:null,b:m.b?{...m.b}:null,winner:m.winner?{...m.winner}:null,draw:m.draw||false,scoreA:m.scoreA||0,scoreB:m.scoreB||0,groupIdx:m.groupIdx||0})),
+    players:(g.players||[]).map(p=>({...p,flag:migrateFlag(p.flag)})),
+    matches:(g.matches||[]).map(m=>migrateMatch({a:m.a?{...m.a}:null,b:m.b?{...m.b}:null,winner:m.winner?{...m.winner}:null,draw:m.draw||false,scoreA:m.scoreA||0,scoreB:m.scoreB||0,groupIdx:m.groupIdx||0})),
     ptsOverride:g.ptsOverride?{...g.ptsOverride}:{}
   }));
   currentRoundIdx=data.currentRoundIdx||0;
