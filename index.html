@@ -140,11 +140,38 @@ body::before{
 .group-card{
   background:var(--s2);border:1px solid var(--bd);
   border-radius:var(--radius-lg);overflow:hidden;
+  transition:border-color .18s;
 }
+.group-card:hover{border-color:rgba(212,168,71,.3);}
 .group-header{
   display:flex;align-items:center;gap:.6rem;
   padding:.75rem 1rem;border-bottom:1px solid var(--bd);
+  cursor:pointer;transition:background .15s;
 }
+.group-header:hover{background:rgba(255,255,255,.03);}
+/* modal de partidas do grupo */
+.gm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:400;display:flex;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px);}
+.gm-overlay.hidden{display:none;}
+.gm-box{background:var(--s2);border:1px solid var(--bd);border-radius:16px;width:100%;max-width:440px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.6);}
+.gm-head{display:flex;align-items:center;gap:.6rem;padding:1rem 1.2rem;border-bottom:1px solid var(--bd);position:sticky;top:0;background:var(--s2);z-index:1;}
+.gm-title{font-family:var(--font2);font-size:.9rem;font-weight:700;color:var(--text);flex:1;}
+.gm-close{background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:2px 6px;border-radius:6px;transition:all .15s;}
+.gm-close:hover{color:var(--text);background:var(--s3);}
+.gm-body{padding:.75rem 1rem;}
+.gm-match{display:flex;align-items:center;gap:.5rem;padding:.6rem .5rem;border-radius:8px;cursor:pointer;transition:background .15s;border:1px solid transparent;}
+.gm-match:hover{background:var(--s3);border-color:var(--bd);}
+.gm-match.done{opacity:.8;}
+.gm-match.done:hover{background:rgba(52,211,153,.05);}
+.gm-team{flex:1;display:flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:500;color:var(--text);}
+.gm-team.right{flex-direction:row-reverse;text-align:right;}
+.gm-score{font-family:var(--font2);font-size:.95rem;font-weight:700;min-width:40px;text-align:center;color:var(--muted2);}
+.gm-badge{font-size:.55rem;padding:2px 5px;border-radius:3px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;}
+.gm-badge.pending{background:var(--s3);color:var(--muted);}
+.gm-badge.live{background:rgba(248,113,113,.15);color:var(--red);}
+.gm-badge.done{background:rgba(52,211,153,.1);color:var(--green);}
+.gm-av{width:22px;height:22px;border-radius:50%;overflow:hidden;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:.7rem;flex-shrink:0;}
+.gm-av img{width:100%;height:100%;object-fit:cover;}
+.gm-divider{font-size:.6rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin:.5rem 0 .3rem;font-family:var(--font2);}
 .group-letter{
   width:28px;height:28px;border-radius:6px;
   display:flex;align-items:center;justify-content:center;
@@ -1609,7 +1636,7 @@ function adjGroupPts(gi, playerId, delta){
   const base = st[playerId] ? st[playerId].p : 0;
   // override acumula o delta sobre o base computado
   const current = g.ptsOverride[playerId] !== undefined ? g.ptsOverride[playerId] : base;
-  g.ptsOverride[playerId] = Math.max(0, current + delta);
+  g.ptsOverride[playerId] = current + delta; // permite negativos
   renderGroups();
   saveState();
 }
@@ -1632,10 +1659,10 @@ function renderGroups(){
     const qualN = g.players.length >= 4 ? 2 : 1; // top 1 ou top 2 avançam
     html+=`<div class="group-card">`;
     // header
-    html+=`<div class="group-header">
+    html+=`<div class="group-header" onclick="openGroupMatches(${gi})" title="Ver partidas do Grupo ${g.letter}">
       <div class="group-letter" style="background:${g.color};">${g.letter}</div>
       <div class="group-name">Grupo ${g.letter}</div>
-      <div class="group-meta">${g.players.length} part.</div>
+      <div class="group-meta">${g.players.length} part. <span style="color:var(--gold3);font-size:.6rem;margin-left:.3rem;">▸</span></div>
     </div>`;
     // standings — só ranking + pontos editáveis
     html+=`<table class="group-table"><tbody>`;
@@ -1645,13 +1672,13 @@ function renderGroups(){
       html+=`<tr>
         <td style="width:24px;"><span class="g-rank ${qualifies?'qualify':'out'}">${rank+1}</span></td>
         <td><div class="g-player">
-          <div class="g-avatar">${p.photo?`<img src="${p.photo}">`:`${p.flag}`}</div>
+          <div class="g-avatar">${p.photo?`<img src="${p.photo}">`:((p.flag&&p.flag.startsWith('<img'))?p.flag:`<span style="font-size:.7rem">${p.flag||'?'}</span>`)}</div>
           <span class="g-pname">${p.name}</span>
         </div></td>
         <td style="width:56px;">
           <div style="display:flex;align-items:center;gap:3px;justify-content:flex-end;">
             <button onclick="adjGroupPts(${gi},${p.id},-1)" style="width:18px;height:18px;border-radius:3px;border:1px solid rgba(248,113,113,.3);background:none;color:var(--red);cursor:pointer;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">−</button>
-            <span class="pts-bold" style="min-width:18px;text-align:center;">${s.p}</span>
+            <span class="pts-bold" style="min-width:18px;text-align:center;color:${s.p<0?'var(--red)':''}">${s.p}</span>
             <button onclick="adjGroupPts(${gi},${p.id},1)" style="width:18px;height:18px;border-radius:3px;border:1px solid rgba(52,211,153,.3);background:none;color:var(--green);cursor:pointer;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">+</button>
           </div>
         </td>
@@ -1661,6 +1688,48 @@ function renderGroups(){
   });
   html+=`</div>`;
   wrap.innerHTML=html;
+}
+
+// ══ MODAL DE PARTIDAS DO GRUPO ══
+function openGroupMatches(gi){
+  const g=groups[gi];
+  const modal=document.getElementById('groupMatchesModal');
+  const title=document.getElementById('gmModalTitle');
+  const letter=document.getElementById('gmModalLetter');
+  const body=document.getElementById('gmMatchesList');
+  title.textContent=`Grupo ${g.letter} — Partidas`;
+  letter.textContent=g.letter;
+  letter.style.background=g.color;
+  let html='';
+  if(!g.matches||!g.matches.length){
+    html='<div style="text-align:center;color:var(--muted);padding:1.5rem;font-size:.8rem;">Nenhuma partida neste grupo.</div>';
+  } else {
+    g.matches.forEach((m,mi)=>{
+      if(!m||!m.a||!m.b)return;
+      const done=m.winner||m.draw;
+      const sA=m.scoreA||0,sB=m.scoreB||0;
+      const live=!done&&(sA>0||sB>0);
+      const badgeCls=done?'done':live?'live':'pending';
+      const badgeTxt=done?(m.draw?'Empate':'Finalizado'):live?'Ao Vivo':'Pendente';
+      const avA=m.a.photo?`<img src="${m.a.photo}">`:(m.a.flag&&m.a.flag.startsWith('<img')?m.a.flag:`<span style="font-size:.7rem">${m.a.flag||'?'}</span>`);
+      const avB=m.b.photo?`<img src="${m.b.photo}">`:(m.b.flag&&m.b.flag.startsWith('<img')?m.b.flag:`<span style="font-size:.7rem">${m.b.flag||'?'}</span>`);
+      const wA=done&&m.winner&&m.winner.id===m.a.id;
+      const wB=done&&m.winner&&m.winner.id===m.b.id;
+      html+=`<div class="gm-match ${done?'done':''}" onclick="closeGroupMatchesModal();openGroupMatch(${gi},${mi})">
+        <div class="gm-av">${avA}</div>
+        <div class="gm-team" style="${wA?'color:var(--gold2);font-weight:700':''}">${m.a.name}</div>
+        <div class="gm-score">${done||live?sA+' — '+sB:'— —'}</div>
+        <div class="gm-team right" style="${wB?'color:var(--gold2);font-weight:700':''}">${m.b.name}</div>
+        <div class="gm-av">${avB}</div>
+        <span class="gm-badge ${badgeCls}" style="margin-left:.3rem">${badgeTxt}</span>
+      </div>`;
+    });
+  }
+  body.innerHTML=html;
+  modal.classList.remove('hidden');
+}
+function closeGroupMatchesModal(){
+  document.getElementById('groupMatchesModal').classList.add('hidden');
 }
 
 // open group match in the same live-score modal
@@ -2942,5 +3011,19 @@ function hideSplash(){const s=document.getElementById('loadingSplash');if(s)s.st
 })();
 </script>
 
+
+<!-- ══ MODAL PARTIDAS DO GRUPO ══ -->
+<div class="gm-overlay hidden" id="groupMatchesModal" onclick="if(event.target===this)closeGroupMatchesModal()">
+  <div class="gm-box">
+    <div class="gm-head">
+      <div id="gmModalLetter" style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--font2);font-size:.85rem;font-weight:700;color:#fff;flex-shrink:0;"></div>
+      <div class="gm-title" id="gmModalTitle">Partidas do Grupo</div>
+      <button class="gm-close" onclick="closeGroupMatchesModal()">✕</button>
+    </div>
+    <div class="gm-body">
+      <div id="gmMatchesList"></div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
