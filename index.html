@@ -1877,10 +1877,19 @@ function renderGroups(){
     sorted.forEach((p,rank)=>{
       const s=st[p.id];
       const qualifies=rank<qualN;
+      // Busca sempre a foto mais recente do seller — não usa cópia desatualizada do grupo
+      const live=sellers.find(sl=>sl.id===p.id)||p;
+      const photo=live.photo||p.photo;
+      const flag=live.flag||p.flag;
+      const avatarHtml=photo
+        ?`<img src="${photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+        :(flag&&flag.startsWith('<img'))
+          ?flag
+          :`<span style="font-size:.7rem">${flag||'?'}</span>`;
       html+=`<tr>
         <td style="width:24px;"><span class="g-rank ${qualifies?'qualify':'out'}">${rank+1}</span></td>
         <td><div class="g-player">
-          <div class="g-avatar">${p.photo?`<img src="${p.photo}">`:((p.flag&&p.flag.startsWith('<img'))?p.flag:`<span style="font-size:.7rem">${p.flag||'?'}</span>`)}</div>
+          <div class="g-avatar">${avatarHtml}</div>
           <span class="g-pname">${p.name}</span>
         </div></td>
         <td style="width:56px;">
@@ -1959,7 +1968,14 @@ function _renderGroupRanking(gi){
     const barW=maxPts!==0?Math.max(Math.round((s.p/maxPts)*100),s.p<0?0:2):2;
     const barColor=qualifies?'var(--green)':s.p<0?'var(--red)':'var(--muted)';
     const ptColor=s.p<0?'var(--red)':isFirst&&s.p>0?'var(--gold2)':'var(--text)';
-    const inner=p.photo?`<img src="${p.photo}">`:(p.flag&&p.flag.startsWith('<img')?p.flag:`<span style="font-size:1.1rem">${p.flag||'?'}</span>`);
+    const live2=sellers.find(sl=>sl.id===p.id)||p;
+    const livePhoto=live2.photo||p.photo;
+    const liveFlag=live2.flag||p.flag;
+    const inner=livePhoto
+      ?`<img src="${livePhoto}">`
+      :(liveFlag&&liveFlag.startsWith('<img'))
+        ?liveFlag
+        :`<span style="font-size:1.1rem">${liveFlag||'?'}</span>`;
 
     html+=`
     <div class="gmr-row ${qualifies?'qualifies':''} ${isFirst&&s.p>0?'leader':''}" style="animation-delay:${rank*80}ms">
