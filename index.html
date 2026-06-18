@@ -1910,6 +1910,13 @@ function renderGroups(){
 // ══ MODAL DE PARTIDAS DO GRUPO ══
 // ══ GRUPO MODAL ARENA ══
 let _gmClockInterval=null;
+let _gmRotateInterval=null;
+let _gmCurrentGroupIdx=0;
+let _gmRotateProgress=0;
+let _gmRotateProgressInterval=null;
+const GM_ROTATE_MS=60000; // 1 minuto
+const GM_PROGRESS_TICK=200; // atualiza barra a cada 200ms
+
 function _gmStartClock(){
   clearInterval(_gmClockInterval);
   const el=document.getElementById('gmLiveClock');
@@ -1925,23 +1932,88 @@ function _gmStartClock(){
   _gmClockInterval=setInterval(tick,1000);
 }
 
-function openGroupMatches(gi){
+function _gmStopRotate(){
+  clearInterval(_gmRotateInterval);
+  clearInterval(_gmRotateProgressInterval);
+  _gmRotateInterval=null;
+  _gmRotateProgressInterval=null;
+  _gmRotateProgress=0;
+}
+
+function _gmUpdateProgressBar(){
+  _gmRotateProgress+=GM_PROGRESS_TICK;
+  const pct=Math.min((_gmRotateProgress/GM_ROTATE_MS)*100,100);
+  const bar=document.getElementById('gmRotateProgressBar');
+  if(bar) bar.style.width=pct+'%';
+}
+
+function _gmStartRotate(){
+  _gmStopRotate();
+  if(groups.length<=1) return; // só roda se tiver mais de 1 grupo
+  _gmRotateProgress=0;
+  const bar=document.getElementById('gmRotateProgressBar');
+  if(bar){bar.style.width='0%';bar.style.transition='none';}
+
+  _gmRotateProgressInterval=setInterval(_gmUpdateProgressBar, GM_PROGRESS_TICK);
+
+  _gmRotateInterval=setInterval(()=>{
+    _gmRotateProgress=0;
+    const bar=document.getElementById('gmRotateProgressBar');
+    if(bar){bar.style.width='0%';bar.style.transition='none';}
+    _gmCurrentGroupIdx=(_gmCurrentGroupIdx+1)%groups.length;
+    _gmLoadGroup(_gmCurrentGroupIdx);
+  }, GM_ROTATE_MS);
+}
+
+function _gmLoadGroup(gi){
+  _gmCurrentGroupIdx=gi;
   const g=groups[gi];
-  const modal=document.getElementById('groupMatchesModal');
-  // header
   const lb=document.getElementById('gmModalLetter');
   lb.textContent=g.letter; lb.style.background=g.color;
   document.getElementById('gmModalTitle').textContent=`Grupo ${g.letter}`;
   document.getElementById('gmModalSubtitle').textContent=`${g.players.length} participantes · ranking ao vivo`;
-  // ticker
   const names=g.players.map(p=>p.name).join(' ★ ');
   document.getElementById('gmTicker').innerHTML=`<span class="gm-ticker-inner">⚡ ${names} ★ Grupo ${g.letter} ★ Copa GR 2026 ★ ${names} ⚡</span>`;
-
-  const body=document.getElementById('gmMatchesList');
   _renderGroupRanking(gi);
+  _renderGroupDots();
+}
 
+function _gmNavGroup(dir){
+  // navegar manualmente — reinicia o timer
+  _gmStopRotate();
+  _gmCurrentGroupIdx=(_gmCurrentGroupIdx+dir+groups.length)%groups.length;
+  _gmLoadGroup(_gmCurrentGroupIdx);
+  _gmStartRotate();
+}
+
+function _renderGroupDots(){
+  const wrap=document.getElementById('gmGroupDots');
+  if(!wrap)return;
+  if(groups.length<=1){wrap.style.display='none';return;}
+  wrap.style.display='flex';
+  wrap.innerHTML=groups.map((g,i)=>`
+    <div onclick="_gmGoToGroup(${i});event.stopPropagation();"
+      style="width:${i===_gmCurrentGroupIdx?'22px':'8px'};height:8px;border-radius:4px;
+             background:${i===_gmCurrentGroupIdx?g.color:'rgba(255,255,255,.15)'};
+             cursor:pointer;transition:all .3s;flex-shrink:0;"
+      title="Grupo ${g.letter}"></div>
+  `).join('');
+}
+
+function _gmGoToGroup(gi){
+  _gmStopRotate();
+  _gmCurrentGroupIdx=gi;
+  _gmLoadGroup(gi);
+  _gmStartRotate();
+}
+
+function openGroupMatches(gi){
+  const modal=document.getElementById('groupMatchesModal');
+  _gmCurrentGroupIdx=gi;
+  _gmLoadGroup(gi);
   modal.classList.remove('hidden');
   _gmStartClock();
+  _gmStartRotate();
 }
 
 function _renderGroupRanking(gi){
@@ -2013,6 +2085,7 @@ function _renderGroupRanking(gi){
 
 function closeGroupMatchesModal(){
   clearInterval(_gmClockInterval);
+  _gmStopRotate();
   document.getElementById('groupMatchesModal').classList.add('hidden');
 }
 
@@ -3311,6 +3384,22 @@ function hideSplash(){const s=document.getElementById('loadingSplash');if(s)s.st
         <span id="gmLiveClock">--:--:--</span>
       </div>
       <button class="gm-close" onclick="closeGroupMatchesModal()">✕</button>
+    </div>
+    <!-- NAV BAR: setas + dots + barra de progresso -->
+    <div id="gmNavBar" style="display:flex;align-items:center;gap:.6rem;padding:.4rem 1rem .3rem;border-bottom:1px solid rgba(255,255,255,.04);background:rgba(0,0,0,.15);flex-shrink:0;">
+      <button onclick="_gmNavGroup(-1)" title="Grupo anterior"
+        style="width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--muted2);cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;"
+        onmouseover="this.style.background='rgba(255,255,255,.1)';this.style.color='var(--text)'"
+        onmouseout="this.style.background='rgba(255,255,255,.04)';this.style.color='var(--muted2)'">‹</button>
+      <div id="gmGroupDots" style="display:flex;gap:5px;align-items:center;flex:1;justify-content:center;"></div>
+      <button onclick="_gmNavGroup(1)" title="Próximo grupo"
+        style="width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--muted2);cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;"
+        onmouseover="this.style.background='rgba(255,255,255,.1)';this.style.color='var(--text)'"
+        onmouseout="this.style.background='rgba(255,255,255,.04)';this.style.color='var(--muted2)'">›</button>
+    </div>
+    <!-- BARRA DE PROGRESSO DO ROTATE (1 minuto) -->
+    <div style="height:2px;background:rgba(255,255,255,.04);flex-shrink:0;overflow:hidden;">
+      <div id="gmRotateProgressBar" style="height:100%;width:0%;background:var(--gold);transition:width .2s linear;"></div>
     </div>
     <!-- TICKER -->
     <div class="gm-ticker">
