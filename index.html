@@ -392,6 +392,7 @@ body::before{
 .gmr-row.leader .gmr-avatar{border-color:var(--gold)!important;box-shadow:0 0 16px rgba(212,168,71,.4)!important;}
 .gmr-info{flex:1;min-width:0;}
 .gmr-name{font-size:.88rem;font-weight:700;color:var(--text);font-family:var(--font2);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 4px rgba(0,0,0,.85),0 0 12px rgba(0,0,0,.5);}
+.gmr-country{font-size:.68rem;font-weight:500;color:rgba(237,232,216,.75);margin-left:5px;font-family:var(--font);letter-spacing:.02em;}
 .gmr-row.leader .gmr-name{color:var(--gold2);}
 .gmr-bar-wrap{height:4px;background:rgba(0,0,0,.4);border-radius:2px;overflow:hidden;width:100%;box-shadow:0 1px 2px rgba(0,0,0,.3);}
 .gmr-bar{height:100%;border-radius:2px;transition:width .6s cubic-bezier(.34,1.2,.64,1);}
@@ -434,7 +435,7 @@ body::before{
 .g-remove-btn:hover{background:rgba(248,113,113,.15);border-color:rgba(248,113,113,.4);color:var(--red);}
 
 /* group table */
-.group-table{width:100%;border-collapse:collapse;}
+.group-table{width:100%;border-collapse:collapse;table-layout:fixed;}
 .group-table th{
   font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;
   color:var(--muted);padding:.4rem .75rem;text-align:left;
@@ -453,14 +454,15 @@ body::before{
 }
 .g-rank.qualify{background:rgba(52,211,153,.15);color:var(--green);}
 .g-rank.out{background:rgba(248,113,113,.08);color:var(--muted);}
-.g-player{display:flex;align-items:center;gap:.5rem;}
+.g-player{display:flex;align-items:center;gap:.5rem;min-width:0;flex:1;}
 .g-avatar{
   width:22px;height:22px;border-radius:50%;overflow:hidden;
   background:var(--s3);display:flex;align-items:center;justify-content:center;
   font-size:.75rem;flex-shrink:0;
 }
 .g-avatar img{width:100%;height:100%;object-fit:cover;}
-.g-pname{font-size:.78rem;font-weight:500;color:var(--text);}
+.g-pname{font-size:.78rem;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;}
+.g-country{font-size:.62rem;color:var(--muted2);font-weight:400;white-space:nowrap;flex-shrink:0;margin-right:4px;}
 .pts-bold{font-weight:700;color:var(--text)!important;}
 
 /* group matches */
@@ -1695,12 +1697,51 @@ function switchTab(tab,el){
 
 // ══ SELLERS ══
 function toggleAddForm(){document.getElementById('addForm').classList.toggle('open');}
+
+// ══ COMPRESSÃO DE FOTOS ══
+// Fotos de celular vêm em vários MB; salvas como base64 puro, isso facilmente
+// excede o limite do localStorage (e deixa o Firebase lento/instável), fazendo
+// o save falhar silenciosamente. Por isso, toda foto é redimensionada e
+// recomprimida (quadrado, JPEG) antes de ser guardada no vendedor.
+function _compressPhotoFile(file, callback){
+  if(!file){callback(null);return;}
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const img=new Image();
+    img.onload=function(){
+      try{
+        const target=320; // resolução final — mais que suficiente para os avatares circulares do app
+        const srcSize=Math.min(img.width,img.height);
+        const sx=(img.width-srcSize)/2, sy=(img.height-srcSize)/2;
+        const canvas=document.createElement('canvas');
+        canvas.width=target;canvas.height=target;
+        const ctx=canvas.getContext('2d');
+        ctx.drawImage(img,sx,sy,srcSize,srcSize,0,0,target,target);
+        let quality=0.85;
+        let dataUrl=canvas.toDataURL('image/jpeg',quality);
+        // proteção extra: se ainda estiver grande, reduz a qualidade até caber num limite seguro
+        while(dataUrl.length>220000&&quality>0.35){
+          quality-=0.1;
+          dataUrl=canvas.toDataURL('image/jpeg',quality);
+        }
+        callback(dataUrl);
+      }catch(err){console.error('Erro ao comprimir foto:',err);callback(e.target.result);}
+    };
+    img.onerror=function(){callback(null);};
+    img.src=e.target.result;
+  };
+  reader.onerror=function(){callback(null);};
+  reader.readAsDataURL(file);
+}
+
 let currentPhotoData='';
 function handlePhotoUpload(input){
   const file=input.files[0];if(!file)return;
-  const r=new FileReader();
-  r.onload=e=>{currentPhotoData=e.target.result;document.getElementById('photo-preview-btn').innerHTML=`<img src="${currentPhotoData}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`};
-  r.readAsDataURL(file);
+  _compressPhotoFile(file,function(dataUrl){
+    if(!dataUrl)return;
+    currentPhotoData=dataUrl;
+    document.getElementById('photo-preview-btn').innerHTML=`<img src="${currentPhotoData}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  });
 }
 function addSeller(){
   const name=document.getElementById('inp-name').value.trim();
@@ -1713,7 +1754,7 @@ function addSeller(){
   document.getElementById('photo-preview-btn').innerHTML='+';currentPhotoData='';
   renderSellers();updateStats();saveState();
 }
-function removeSeller(id){sellers=sellers.filter(s=>s.id!==id);renderSellers();updateStats();}
+function removeSeller(id){sellers=sellers.filter(s=>s.id!==id);renderSellers();updateStats();saveState();}
 
 function renderSellers(){
   document.getElementById('sellersGrid').innerHTML=sellers.map(s=>`
@@ -1751,13 +1792,12 @@ function triggerPhotoForSeller(id){
   inp.type='file';inp.accept='image/*';
   inp.onchange=function(){
     const file=inp.files[0];if(!file)return;
-    const r=new FileReader();
-    r.onload=e=>{
+    _compressPhotoFile(file,function(dataUrl){
+      if(!dataUrl)return;
       const s=sellers.find(x=>x.id===id);if(!s)return;
-      s.photo=e.target.result;
+      s.photo=dataUrl;
       renderSellers();renderSidebar();renderBracket();renderGroups();saveState();
-    };
-    r.readAsDataURL(file);
+    });
   };
   inp.click();
 }
@@ -2014,6 +2054,7 @@ function renderGroups(){
       const live=sellers.find(sl=>sl.id===p.id)||p;
       const photo=live.photo||p.photo;
       const flag=live.flag||p.flag;
+      const country=live.country||p.country||'';
       const avatarHtml=photo
         ?`<img src="${photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
         :(flag&&flag.startsWith('<img'))
@@ -2024,15 +2065,16 @@ function renderGroups(){
         <td><div class="g-player">
           <div class="g-avatar">${avatarHtml}</div>
           <span class="g-pname">${p.name}</span>
+          ${country?`<span class="g-country">${country}</span>`:''}
         </div></td>
-        <td style="width:56px;">
+        <td style="width:62px;padding-left:.25rem;padding-right:.25rem;">
           <div style="display:flex;align-items:center;gap:3px;justify-content:flex-end;">
             <button onclick="adjGroupPts(${gi},${p.id},-1)" style="width:18px;height:18px;border-radius:3px;border:1px solid rgba(248,113,113,.3);background:none;color:var(--red);cursor:pointer;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">−</button>
             <span class="pts-bold" style="min-width:18px;text-align:center;color:${s.p<0?'var(--red)':''}">${s.p}</span>
             <button onclick="adjGroupPts(${gi},${p.id},1)" style="width:18px;height:18px;border-radius:3px;border:1px solid rgba(52,211,153,.3);background:none;color:var(--green);cursor:pointer;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">+</button>
           </div>
         </td>
-        <td style="width:20px;">
+        <td style="width:26px;padding-left:.2rem;padding-right:.4rem;">
           <button onclick="removeSellerFromGroup(${gi},${p.id})" class="g-remove-btn" title="Remover do grupo">×</button>
         </td>
       </tr>`;
@@ -2188,6 +2230,7 @@ function _renderGroupRanking(gi){
     const live2=sellers.find(sl=>sl.id===p.id)||p;
     const livePhoto=live2.photo||p.photo;
     const liveFlag=live2.flag||p.flag;
+    const liveCountry=live2.country||p.country||'';
     const inner=livePhoto
       ?`<img src="${livePhoto}">`
       :(liveFlag&&liveFlag.startsWith('<img'))
@@ -2207,7 +2250,7 @@ function _renderGroupRanking(gi){
       <div class="gmr-medal">${medal}</div>
       <div class="gmr-avatar ${qualifies?'qual-av':''}">${inner}</div>
       <div class="gmr-info">
-        <div class="gmr-name">${p.name}</div>
+        <div class="gmr-name">${p.name}${liveCountry?`<span class="gmr-country">${liveCountry}</span>`:''}</div>
         <div class="gmr-bar-wrap">
           <div class="gmr-bar" style="width:${barW}%;background:${barColor};"></div>
         </div>
@@ -2754,7 +2797,11 @@ function selectSbFlag(f,c){selectSbFlagCode('',c);}
 let sbCurrentPhoto='';
 function handleSbPhoto(input){
   const file=input.files[0];if(!file)return;
-  const r=new FileReader();r.onload=e=>{sbCurrentPhoto=e.target.result;document.getElementById('sb-photo-preview').innerHTML=`<img src="${sbCurrentPhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`};r.readAsDataURL(file);
+  _compressPhotoFile(file,function(dataUrl){
+    if(!dataUrl)return;
+    sbCurrentPhoto=dataUrl;
+    document.getElementById('sb-photo-preview').innerHTML=`<img src="${sbCurrentPhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  });
 }
 function addSellerFromSidebar(){
   const name=document.getElementById('sb-inp-name').value.trim();
@@ -2807,7 +2854,11 @@ function openEditPlayerModal(id){
 }
 function handleEpmPhoto(input){
   const file=input.files[0];if(!file)return;
-  const r=new FileReader();r.onload=e=>{epmCurrentPhoto=e.target.result;document.getElementById('epm-photo-btn').innerHTML=`<img src="${epmCurrentPhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`};r.readAsDataURL(file);
+  _compressPhotoFile(file,function(dataUrl){
+    if(!dataUrl)return;
+    epmCurrentPhoto=dataUrl;
+    document.getElementById('epm-photo-btn').innerHTML=`<img src="${epmCurrentPhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  });
 }
 function toggleEpmFlagPicker(){
   epmFlagPickerOpen=!epmFlagPickerOpen;const p=document.getElementById('epmFlagPicker');p.style.display=epmFlagPickerOpen?'block':'none';
@@ -2947,7 +2998,11 @@ function insertIntoCurrentRound(player){
 }
 function handleRepescPhoto(input){
   const file=input.files[0];if(!file)return;
-  const r=new FileReader();r.onload=e=>{repescPhotoData=e.target.result;document.getElementById('repesc-photo-btn').innerHTML=`<img src="${repescPhotoData}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`};r.readAsDataURL(file);
+  _compressPhotoFile(file,function(dataUrl){
+    if(!dataUrl)return;
+    repescPhotoData=dataUrl;
+    document.getElementById('repesc-photo-btn').innerHTML=`<img src="${repescPhotoData}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  });
 }
 function toggleRepescFlagPicker(){
   repescFlagPickerOpen=!repescFlagPickerOpen;const p=document.getElementById('repescFlagPicker');p.style.display=repescFlagPickerOpen?'block':'none';
@@ -3365,9 +3420,18 @@ function applyState(data){
   groupsPhaseActive=data.groupsPhaseActive||false;
   return true;
 }
+let _saveErrorWarned=false;
 function saveState(){
   const state=getState();
-  try{localStorage.setItem('copa_gr_v2_state',JSON.stringify(state));}catch(e){}
+  try{
+    localStorage.setItem('copa_gr_v2_state',JSON.stringify(state));
+  }catch(e){
+    console.error('Erro ao salvar localmente:',e);
+    if(!_saveErrorWarned){
+      _saveErrorWarned=true;
+      alert('Não foi possível salvar as alterações: o armazenamento do navegador está cheio. Tente remover fotos muito grandes ou limpar dados antigos em "Apagar Tudo".');
+    }
+  }
   if(window.__saveToCloud)window.__saveToCloud(state);
 }
 window.__loadStateFromCloud=function(data){
@@ -3511,7 +3575,11 @@ function hideSplash(){const s=document.getElementById('loadingSplash');if(s)s.st
       window.__isSyncing = true;
       dbRef.set(state)
         .then(function() { setTimeout(function(){ window.__isSyncing = false; }, 500); })
-        .catch(function(e) { console.error(e); window.__isSyncing = false; });
+        .catch(function(e) {
+          console.error(e);
+          window.__isSyncing = false;
+          updateSyncStatus('error');
+        });
     };
 
     updateSyncStatus('connected');
