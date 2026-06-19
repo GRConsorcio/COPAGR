@@ -344,12 +344,14 @@ body::before{
 }
 /* capa de bandeira do país — nítida e viva atrás da foto/nome, desfocando só abaixo */
 .gmr-flagbg{
-  position:absolute;inset:0;z-index:0;
+  position:absolute;top:0;bottom:0;left:15%;right:15%;z-index:0;
   background-size:cover;background-position:center;background-repeat:no-repeat;
   pointer-events:none;
+  -webkit-mask-image:linear-gradient(to right, transparent 0%, black 18%, black 82%, transparent 100%);
+  mask-image:linear-gradient(to right, transparent 0%, black 18%, black 82%, transparent 100%);
 }
 .gmr-flagbg-blur{
-  position:absolute;inset:-3px;z-index:0;
+  position:absolute;top:-3px;bottom:-3px;left:15%;right:15%;z-index:0;
   background-size:cover;background-position:center;background-repeat:no-repeat;
   filter:blur(9px) saturate(1.25);
   transform:scale(1.14);
