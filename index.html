@@ -342,12 +342,24 @@ body::before{
   border:1px solid transparent;transition:border-color .2s,background .2s;
   position:relative;cursor:default;overflow:hidden;
 }
-/* capa de bandeira do país — fundo desfocado/degradê atrás do nome e da barra */
+/* capa de bandeira do país — nítida e viva atrás da foto/nome, desfocando só abaixo */
 .gmr-flagbg{
-  position:absolute;inset:-2px;z-index:0;
+  position:absolute;inset:0;z-index:0;
   background-size:cover;background-position:center;background-repeat:no-repeat;
-  filter:blur(7px) saturate(1.4);
-  transform:scale(1.2);
+  pointer-events:none;
+}
+.gmr-flagbg-blur{
+  position:absolute;inset:-3px;z-index:0;
+  background-size:cover;background-position:center;background-repeat:no-repeat;
+  filter:blur(9px) saturate(1.25);
+  transform:scale(1.14);
+  pointer-events:none;
+  -webkit-mask-image:linear-gradient(to bottom, transparent 0%, transparent 42%, rgba(0,0,0,.9) 68%, #000 100%);
+  mask-image:linear-gradient(to bottom, transparent 0%, transparent 42%, rgba(0,0,0,.9) 68%, #000 100%);
+}
+.gmr-flagbg-tint{
+  position:absolute;inset:0;z-index:0;
+  background:linear-gradient(180deg, rgba(8,8,16,.12) 0%, rgba(8,8,16,.1) 40%, rgba(8,8,16,.55) 72%, rgba(8,8,16,.72) 100%);
   pointer-events:none;
 }
 .gmr-medal,.gmr-avatar,.gmr-info,.gmr-pts-block,.gmr-controls,.gmr-remove-btn{position:relative;z-index:1;}
@@ -366,25 +378,25 @@ body::before{
   background:linear-gradient(135deg,rgba(212,168,71,.07),rgba(212,168,71,.02))!important;
   box-shadow:0 4px 20px rgba(0,0,0,.3),0 0 0 1px rgba(212,168,71,.08);
 }
-.gmr-medal{font-size:1.1rem;min-width:28px;text-align:center;flex-shrink:0;}
+.gmr-medal{font-size:1.1rem;min-width:28px;text-align:center;flex-shrink:0;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));}
 .gmr-avatar{
   width:46px;height:46px;border-radius:50%;overflow:hidden;
   background:var(--s3);display:flex;align-items:center;justify-content:center;
-  font-size:1.2rem;flex-shrink:0;border:2px solid rgba(255,255,255,.07);
-  transition:border-color .2s;box-shadow:0 2px 8px rgba(0,0,0,.3);
+  font-size:1.2rem;flex-shrink:0;border:2px solid rgba(255,255,255,.45);
+  transition:border-color .2s;box-shadow:0 2px 10px rgba(0,0,0,.45);
 }
 .gmr-avatar img{width:100%;height:100%;object-fit:cover;}
-.gmr-avatar.qual-av{border-color:rgba(52,211,153,.4);box-shadow:0 0 12px rgba(52,211,153,.2);}
-.gmr-row.leader .gmr-avatar{border-color:var(--gold)!important;box-shadow:0 0 16px rgba(212,168,71,.35)!important;}
+.gmr-avatar.qual-av{border-color:rgba(52,211,153,.7);box-shadow:0 0 12px rgba(52,211,153,.3);}
+.gmr-row.leader .gmr-avatar{border-color:var(--gold)!important;box-shadow:0 0 16px rgba(212,168,71,.4)!important;}
 .gmr-info{flex:1;min-width:0;}
-.gmr-name{font-size:.88rem;font-weight:700;color:var(--text);font-family:var(--font2);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.gmr-name{font-size:.88rem;font-weight:700;color:var(--text);font-family:var(--font2);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 4px rgba(0,0,0,.85),0 0 12px rgba(0,0,0,.5);}
 .gmr-row.leader .gmr-name{color:var(--gold2);}
-.gmr-bar-wrap{height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;width:100%;}
+.gmr-bar-wrap{height:4px;background:rgba(0,0,0,.4);border-radius:2px;overflow:hidden;width:100%;box-shadow:0 1px 2px rgba(0,0,0,.3);}
 .gmr-bar{height:100%;border-radius:2px;transition:width .6s cubic-bezier(.34,1.2,.64,1);}
-.gmr-qual-tag{font-size:.56rem;color:var(--green);letter-spacing:.08em;text-transform:uppercase;font-weight:700;font-family:var(--font2);margin-top:3px;}
+.gmr-qual-tag{font-size:.56rem;color:var(--green);letter-spacing:.08em;text-transform:uppercase;font-weight:700;font-family:var(--font2);margin-top:3px;text-shadow:0 1px 3px rgba(0,0,0,.8);}
 .gmr-pts-block{display:flex;flex-direction:column;align-items:center;min-width:36px;flex-shrink:0;}
-.gmr-pts{font-family:var(--font2);font-size:1.5rem;font-weight:900;line-height:1;transition:color .3s;}
-.gmr-pts-label{font-size:.5rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-family:var(--font2);margin-top:1px;}
+.gmr-pts{font-family:var(--font2);font-size:1.5rem;font-weight:900;line-height:1;transition:color .3s;text-shadow:0 1px 4px rgba(0,0,0,.7);}
+.gmr-pts-label{font-size:.5rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-family:var(--font2);margin-top:1px;text-shadow:0 1px 3px rgba(0,0,0,.7);}
 .gmr-controls{display:flex;flex-direction:column;gap:4px;flex-shrink:0;}
 .gmr-btn{
   width:22px;height:22px;border-radius:6px;border:none;
@@ -2179,10 +2191,12 @@ function _renderGroupRanking(gi){
       :(liveFlag&&liveFlag.startsWith('<img'))
         ?liveFlag
         :`<span style="font-size:1.1rem">${liveFlag||'?'}</span>`;
-    // capa de bandeira do país atrás do nome/barra, com degradê para manter o texto legível
+    // capa de bandeira: nítida e viva atrás da foto/nome, desfoque só na faixa de baixo (barra/tag)
     const flagUrl=_flagCoverUrl({flag:liveFlag});
     const flagBgHtml=flagUrl
-      ?`<div class="gmr-flagbg" style="background-image:linear-gradient(100deg,rgba(8,8,16,.93) 0%,rgba(8,8,16,.55) 38%,rgba(8,8,16,.4) 62%,rgba(8,8,16,.88) 100%),url('${flagUrl}');"></div>`
+      ?`<div class="gmr-flagbg" style="background-image:url('${flagUrl}');"></div>
+        <div class="gmr-flagbg-blur" style="background-image:url('${flagUrl}');"></div>
+        <div class="gmr-flagbg-tint"></div>`
       :'';
 
     html+=`
