@@ -340,8 +340,24 @@ body::before{
   display:flex;align-items:center;gap:.65rem;
   padding:.7rem .5rem;border-radius:12px;margin-bottom:.4rem;
   border:1px solid transparent;transition:border-color .2s,background .2s;
-  position:relative;cursor:default;
+  position:relative;cursor:default;overflow:hidden;
 }
+/* capa de bandeira do país — fundo desfocado/degradê atrás do nome e da barra */
+.gmr-flagbg{
+  position:absolute;inset:-2px;z-index:0;
+  background-size:cover;background-position:center;background-repeat:no-repeat;
+  filter:blur(7px) saturate(1.4);
+  transform:scale(1.2);
+  pointer-events:none;
+}
+.gmr-medal,.gmr-avatar,.gmr-info,.gmr-pts-block,.gmr-controls,.gmr-remove-btn{position:relative;z-index:1;}
+.gmr-remove-btn{
+  width:20px;height:20px;border-radius:6px;flex-shrink:0;margin-left:2px;
+  border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);
+  color:var(--muted2);display:flex;align-items:center;justify-content:center;
+  font-size:.8rem;line-height:1;cursor:pointer;transition:all .15s;
+}
+.gmr-remove-btn:hover{background:rgba(248,113,113,.16);border-color:rgba(248,113,113,.4);color:var(--red);}
 .gmr-row:hover{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.05);}
 .gmr-row.qualifies{border-color:rgba(52,211,153,.12);background:rgba(52,211,153,.03);}
 .gmr-row.qualifies:hover{border-color:rgba(52,211,153,.25);background:rgba(52,211,153,.06);}
@@ -388,6 +404,20 @@ body::before{
 }
 .group-name{font-family:var(--font2);font-size:.85rem;font-weight:600;color:var(--text);}
 .group-meta{font-size:.65rem;color:var(--muted2);margin-left:auto;}
+.group-add-btn{
+  width:20px;height:20px;border-radius:5px;flex-shrink:0;
+  border:1px solid rgba(212,168,71,.3);background:rgba(212,168,71,.08);color:var(--gold2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.78rem;font-weight:700;cursor:pointer;transition:all .15s;
+}
+.group-add-btn:hover{background:rgba(212,168,71,.2);border-color:var(--gold);}
+.g-remove-btn{
+  width:18px;height:18px;border-radius:4px;border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);color:var(--muted2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.68rem;cursor:pointer;transition:all .15s;
+}
+.g-remove-btn:hover{background:rgba(248,113,113,.15);border-color:rgba(248,113,113,.4);color:var(--red);}
 
 /* group table */
 .group-table{width:100%;border-collapse:collapse;}
@@ -1849,6 +1879,93 @@ function adjGroupPts(gi, playerId, delta){
   saveState();
 }
 
+// ── adicionar / remover vendedores de um grupo na fase de grupos ──
+function getUnassignedSellers(){
+  const assignedIds=new Set();
+  groups.forEach(gr=>gr.players.forEach(p=>assignedIds.add(p.id)));
+  return sellers.filter(s=>s.status==='alive'&&!assignedIds.has(s.id));
+}
+
+function openAddToGroupModal(gi){
+  const g=groups[gi];
+  if(!g) return;
+  window._addToGroupTarget=gi;
+  const sub=document.getElementById('addToGroupSubtitle');
+  if(sub) sub.textContent=`Grupo ${g.letter} · ${g.players.length} participante${g.players.length!==1?'s':''}`;
+  const badge=document.getElementById('addToGroupLetter');
+  if(badge){badge.textContent=g.letter;badge.style.background=g.color;}
+  renderAddToGroupList(gi);
+  document.getElementById('addToGroupModal').classList.remove('hidden');
+}
+
+function closeAddToGroupModal(){
+  const m=document.getElementById('addToGroupModal');
+  if(m) m.classList.add('hidden');
+}
+
+function renderAddToGroupList(gi){
+  const list=document.getElementById('addToGroupList');
+  if(!list) return;
+  const available=getUnassignedSellers();
+  if(!available.length){
+    list.innerHTML=`<div style="text-align:center;color:var(--muted2);font-size:.75rem;padding:1.2rem .5rem;line-height:1.5;">Nenhum vendedor disponível.<br>Todos já estão em algum grupo, ou adicione novos vendedores na aba Vendedores.</div>`;
+    return;
+  }
+  list.innerHTML=available.map(s=>{
+    const av=s.photo?`<img src="${s.photo}">`:`<span>${s.flag||'?'}</span>`;
+    return `<div class="sb-player-item" style="cursor:pointer;" onclick="addSellerToGroup(${gi},${s.id})">
+      <div class="sb-p-avatar">${av}</div>
+      <div class="sb-p-info">
+        <div class="sb-p-name">${s.name}</div>
+        <div class="sb-p-country">${s.flag||''} ${s.country||''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function addSellerToGroup(gi, sellerId){
+  const g=groups[gi];
+  if(!g) return;
+  const seller=sellers.find(s=>s.id===sellerId);
+  if(!seller||g.players.some(p=>p.id===sellerId)) return;
+  // cria partidas de round-robin contra todos os jogadores já existentes do grupo
+  g.players.forEach(p=>{
+    g.matches.push({a:p,b:seller,winner:null,draw:false,scoreA:0,scoreB:0,groupIdx:gi});
+  });
+  g.players.push(seller);
+  if(!g.standings) g.standings={};
+  g.standings[seller.id]={p:0,w:0,d:0,l:0,gf:0,ga:0};
+  groupsPhaseActive=true;
+  closeAddToGroupModal();
+  renderGroups();
+  updateStats();
+  const modal=document.getElementById('groupMatchesModal');
+  if(modal&&!modal.classList.contains('hidden')&&_gmCurrentGroupIdx===gi){
+    _gmLoadGroup(gi);
+  }
+  saveState();
+}
+
+function removeSellerFromGroup(gi, sellerId){
+  const g=groups[gi];
+  if(!g) return;
+  const seller=g.players.find(p=>p.id===sellerId);
+  if(!seller) return;
+  if(!confirm(`Remover ${seller.name} do Grupo ${g.letter}? As partidas dele neste grupo serão excluídas.`)) return;
+  g.players=g.players.filter(p=>p.id!==sellerId);
+  g.matches=g.matches.filter(m=>m.a.id!==sellerId&&m.b.id!==sellerId);
+  if(g.ptsOverride) delete g.ptsOverride[sellerId];
+  if(g.standings) delete g.standings[sellerId];
+  renderGroups();
+  updateStats();
+  const modal=document.getElementById('groupMatchesModal');
+  if(modal&&!modal.classList.contains('hidden')&&_gmCurrentGroupIdx===gi){
+    _gmLoadGroup(gi);
+  }
+  saveState();
+}
+
+
 function renderGroups(){
   const wrap=document.getElementById('groupsWrap');
   if(!groups.length){
@@ -1870,7 +1987,9 @@ function renderGroups(){
     html+=`<div class="group-header" onclick="openGroupMatches(${gi})" title="Ver partidas do Grupo ${g.letter}">
       <div class="group-letter" style="background:${g.color};">${g.letter}</div>
       <div class="group-name">Grupo ${g.letter}</div>
-      <div class="group-meta">${g.players.length} part. <span style="color:var(--gold3);font-size:.6rem;margin-left:.3rem;">▸</span></div>
+      <div class="group-meta">${g.players.length} part.</div>
+      <button class="group-add-btn" onclick="event.stopPropagation();openAddToGroupModal(${gi})" title="Adicionar vendedor ao Grupo ${g.letter}">+</button>
+      <span style="color:var(--gold3);font-size:.6rem;">▸</span>
     </div>`;
     // standings — só ranking + pontos editáveis
     html+=`<table class="group-table"><tbody>`;
@@ -1898,6 +2017,9 @@ function renderGroups(){
             <span class="pts-bold" style="min-width:18px;text-align:center;color:${s.p<0?'var(--red)':''}">${s.p}</span>
             <button onclick="adjGroupPts(${gi},${p.id},1)" style="width:18px;height:18px;border-radius:3px;border:1px solid rgba(52,211,153,.3);background:none;color:var(--green);cursor:pointer;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">+</button>
           </div>
+        </td>
+        <td style="width:20px;">
+          <button onclick="removeSellerFromGroup(${gi},${p.id})" class="g-remove-btn" title="Remover do grupo">×</button>
         </td>
       </tr>`;
     });
@@ -2016,6 +2138,15 @@ function openGroupMatches(gi){
   _gmStartRotate();
 }
 
+// extrai o código do país a partir do HTML salvo em seller.flag (ex: flagcdn.com/w20/br.png -> "br")
+// e retorna uma URL de bandeira em alta resolução para usar como capa de fundo
+function _flagCoverUrl(seller){
+  if(!seller||!seller.flag) return null;
+  const m=/flagcdn\.com\/w\d+\/([a-z0-9-]+)\.png/i.exec(seller.flag);
+  if(!m) return null;
+  return `https://flagcdn.com/h240/${m[1]}.png`;
+}
+
 function _renderGroupRanking(gi){
   const g=groups[gi];
   const body=document.getElementById('gmMatchesList');
@@ -2048,9 +2179,15 @@ function _renderGroupRanking(gi){
       :(liveFlag&&liveFlag.startsWith('<img'))
         ?liveFlag
         :`<span style="font-size:1.1rem">${liveFlag||'?'}</span>`;
+    // capa de bandeira do país atrás do nome/barra, com degradê para manter o texto legível
+    const flagUrl=_flagCoverUrl({flag:liveFlag});
+    const flagBgHtml=flagUrl
+      ?`<div class="gmr-flagbg" style="background-image:linear-gradient(100deg,rgba(8,8,16,.93) 0%,rgba(8,8,16,.55) 38%,rgba(8,8,16,.4) 62%,rgba(8,8,16,.88) 100%),url('${flagUrl}');"></div>`
+      :'';
 
     html+=`
     <div class="gmr-row ${qualifies?'qualifies':''} ${isFirst&&s.p>0?'leader':''}" style="animation-delay:${rank*80}ms">
+      ${flagBgHtml}
       <div class="gmr-medal">${medal}</div>
       <div class="gmr-avatar ${qualifies?'qual-av':''}">${inner}</div>
       <div class="gmr-info">
@@ -2070,6 +2207,7 @@ function _renderGroupRanking(gi){
         <button onclick="event.stopPropagation();adjGroupPts(${gi},${p.id},1);_renderGroupRanking(${gi})"
           class="gmr-btn gmr-btn-plus">+</button>
       </div>
+      <button class="gmr-remove-btn" onclick="event.stopPropagation();removeSellerFromGroup(${gi},${p.id})" title="Remover do grupo">×</button>
     </div>`;
   });
 
@@ -3383,6 +3521,7 @@ function hideSplash(){const s=document.getElementById('loadingSplash');if(s)s.st
         <span class="gm-clock-dot"></span>
         <span id="gmLiveClock">--:--:--</span>
       </div>
+      <button class="gm-close" onclick="event.stopPropagation();openAddToGroupModal(_gmCurrentGroupIdx)" title="Adicionar vendedor a este grupo" style="font-size:1rem;">+</button>
       <button class="gm-close" onclick="closeGroupMatchesModal()">✕</button>
     </div>
     <!-- NAV BAR: setas + dots + barra de progresso -->
@@ -3413,6 +3552,23 @@ function hideSplash(){const s=document.getElementById('loadingSplash');if(s)s.st
     <div class="gm-footer">
       <span class="gm-footer-icon">⚽</span>
       Copa GR · Fase de Grupos · Use + / − para ajustar pontos de cada vendedor
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: ADICIONAR VENDEDOR AO GRUPO ══ -->
+<div class="gm-overlay hidden" id="addToGroupModal" onclick="if(event.target===this)closeAddToGroupModal()">
+  <div class="gm-box" style="max-width:380px;max-height:70vh;">
+    <div class="gm-head">
+      <div class="gm-letter-badge" id="addToGroupLetter"></div>
+      <div class="gm-head-info">
+        <div class="gm-title">Adicionar Vendedor</div>
+        <div class="gm-subtitle" id="addToGroupSubtitle">Grupo</div>
+      </div>
+      <button class="gm-close" onclick="closeAddToGroupModal()">✕</button>
+    </div>
+    <div class="gm-body">
+      <div id="addToGroupList"></div>
     </div>
   </div>
 </div>
