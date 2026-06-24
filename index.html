@@ -1746,7 +1746,7 @@ function _compressPhotoFile(file, callback){
     const img=new Image();
     img.onload=function(){
       try{
-        const target=320; // resolução final — mais que suficiente para os avatares circulares do app
+        const target=256; // resolução final — mais que suficiente para os avatares circulares do app
         const srcSize=Math.min(img.width,img.height);
         const sx=(img.width-srcSize)/2, sy=(img.height-srcSize)/2;
         const canvas=document.createElement('canvas');
@@ -1756,7 +1756,7 @@ function _compressPhotoFile(file, callback){
         let quality=0.85;
         let dataUrl=canvas.toDataURL('image/jpeg',quality);
         // proteção extra: se ainda estiver grande, reduz a qualidade até caber num limite seguro
-        while(dataUrl.length>220000&&quality>0.35){
+        while(dataUrl.length>150000&&quality>0.35){
           quality-=0.1;
           dataUrl=canvas.toDataURL('image/jpeg',quality);
         }
@@ -3682,14 +3682,37 @@ function oitApply(){
 }
 
 // ══ CLOUD SYNC ══
+// BUGFIX "armazenamento cheio": cada partida de grupo e cada rodada do
+// chaveamento guardava uma cópia COMPLETA do jogador (com a foto em base64
+// e tudo) toda vez que ele aparecia como 'a', 'b' ou 'winner'. Com grupos
+// (várias partidas por jogador) + várias rodadas do mata-mata, a MESMA foto
+// de ~200KB podia ser salva 10-20+ vezes no JSON. stripPhoto() remove a foto
+// dessas cópias antes de salvar — ela continua existindo uma única vez em
+// "sellers" — e rehydratePlayer() devolve a foto certa ao carregar de volta.
+// Nada muda na hora de exibir: as telas continuam lendo p.photo normalmente,
+// só que agora ele é "religado" assim que o estado é carregado.
+function stripPhoto(p){
+  if(!p) return null;
+  const {photo, ...rest} = p;
+  return rest;
+}
+function rehydratePlayer(p){
+  if(!p) return null;
+  const full = sellers.find(s=>s.id===p.id);
+  return full ? {...p, photo: full.photo||''} : p;
+}
+function rehydrateMatch(m){
+  return {...m, a:rehydratePlayer(m.a), b:rehydratePlayer(m.b), winner:rehydratePlayer(m.winner)};
+}
+
 function getState(){
   return{
-    sellers:sellers.map(s=>({...s})),
-    allRounds:allRounds.map(round=>round.map(m=>({a:m.a?{...m.a}:null,b:m.b?{...m.b}:null,winner:m.winner?{...m.winner}:null,draw:m.draw,bye:m.bye,roundIdx:m.roundIdx,scoreA:m.scoreA||0,scoreB:m.scoreB||0}))),
+    sellers:sellers.map(s=>({...s})), // única cópia com foto completa
+    allRounds:allRounds.map(round=>round.map(m=>({a:stripPhoto(m.a),b:stripPhoto(m.b),winner:stripPhoto(m.winner),draw:m.draw,bye:m.bye,roundIdx:m.roundIdx,scoreA:m.scoreA||0,scoreB:m.scoreB||0}))),
     groups:groups.map(g=>({
       letter:g.letter,color:g.color,
-      players:g.players.map(p=>({...p})),
-      matches:g.matches.map(m=>({a:m.a?{...m.a}:null,b:m.b?{...m.b}:null,winner:m.winner?{...m.winner}:null,draw:m.draw,scoreA:m.scoreA||0,scoreB:m.scoreB||0,groupIdx:m.groupIdx})),
+      players:g.players.map(p=>stripPhoto({...p})),
+      matches:g.matches.map(m=>({a:stripPhoto(m.a),b:stripPhoto(m.b),winner:stripPhoto(m.winner),draw:m.draw,scoreA:m.scoreA||0,scoreB:m.scoreB||0,groupIdx:m.groupIdx})),
       ptsOverride:g.ptsOverride?{...g.ptsOverride}:{}
     })),
     currentRoundIdx,matchCount,groupsPhaseActive,
@@ -3721,11 +3744,11 @@ function migrateMatch(m){return{...m,a:migratePlayer(m.a),b:migratePlayer(m.b),w
 function applyState(data){
   if(!data||!data.sellers)return false;
   sellers=data.sellers.map(s=>({...s,flag:migrateFlag(s.flag)}));
-  allRounds=(data.allRounds||[]).map(round=>round.map(m=>migrateMatch({a:m.a?{...m.a}:null,b:m.b?{...m.b}:null,winner:m.winner?{...m.winner}:null,draw:m.draw||false,bye:m.bye||false,roundIdx:m.roundIdx||0,scoreA:m.scoreA||0,scoreB:m.scoreB||0})));
+  allRounds=(data.allRounds||[]).map(round=>round.map(m=>rehydrateMatch(migrateMatch({a:m.a?{...m.a}:null,b:m.b?{...m.b}:null,winner:m.winner?{...m.winner}:null,draw:m.draw||false,bye:m.bye||false,roundIdx:m.roundIdx||0,scoreA:m.scoreA||0,scoreB:m.scoreB||0}))));
   groups=(data.groups||[]).map(g=>({
     letter:g.letter,color:g.color,
-    players:(g.players||[]).map(p=>({...p,flag:migrateFlag(p.flag)})),
-    matches:(g.matches||[]).map(m=>migrateMatch({a:m.a?{...m.a}:null,b:m.b?{...m.b}:null,winner:m.winner?{...m.winner}:null,draw:m.draw||false,scoreA:m.scoreA||0,scoreB:m.scoreB||0,groupIdx:m.groupIdx||0})),
+    players:(g.players||[]).map(p=>rehydratePlayer({...p,flag:migrateFlag(p.flag)})),
+    matches:(g.matches||[]).map(m=>rehydrateMatch(migrateMatch({a:m.a?{...m.a}:null,b:m.b?{...m.b}:null,winner:m.winner?{...m.winner}:null,draw:m.draw||false,scoreA:m.scoreA||0,scoreB:m.scoreB||0,groupIdx:m.groupIdx||0}))),
     ptsOverride:g.ptsOverride?{...g.ptsOverride}:{}
   }));
   currentRoundIdx=data.currentRoundIdx||0;
@@ -3774,6 +3797,10 @@ function hideSplash(){const s=document.getElementById('loadingSplash');if(s)s.st
       if(applyState(local)){
         renderEverything();
         setTimeout(hideSplash,2500);
+        // Regrava já no formato sem foto duplicada — resolve o "armazenamento
+        // cheio" de quem carregou um estado salvo antes dessa correção,
+        // sem precisar esperar a próxima ação do usuário.
+        setTimeout(()=>{ try{ saveState(); }catch(e){} },1200);
         return;
       }
     }catch(e){}
