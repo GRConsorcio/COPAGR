@@ -694,17 +694,29 @@ body::before{
 
 /* scoreboard */
 .scoreboard{
-  display:grid;grid-template-columns:1fr 70px 70px 1fr;
+  display:flex;align-items:stretch;
   border-radius:var(--radius);overflow:hidden;border:1px solid var(--bd);margin-bottom:1rem;
 }
+.sb-half{
+  flex:1;position:relative;display:grid;
+  background-size:cover;background-position:center;background-color:var(--s2);
+  transition:background-image .3s;
+}
+.sb-half:first-child{grid-template-columns:1fr 70px;}
+.sb-half:last-child{grid-template-columns:70px 1fr;}
+.sb-half::before{
+  content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(8,8,16,.45) 0%,rgba(8,8,16,.55) 50%,rgba(8,8,16,.72) 100%);
+}
+.sb-half>*{position:relative;z-index:1;}
 .sb-player{padding:.9rem .75rem;display:flex;flex-direction:column;align-items:center;gap:.25rem;transition:background .15s;}
-.sb-player.sb-leading{background:rgba(212,168,71,.07);}
-.sb-player.sb-trailing{background:rgba(0,0,0,.25);}
+.sb-player.sb-leading{background:rgba(212,168,71,.12);}
+.sb-player.sb-trailing{background:rgba(0,0,0,.35);}
 .sb-player.sb-draw{background:rgba(251,146,60,.05);}
 .sb-flag{font-size:2rem;line-height:1;}
-.sb-name{font-family:var(--font2);font-weight:600;font-size:.8rem;color:var(--text);text-align:center;line-height:1.2;}
-.sb-country{font-size:.55rem;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;}
-.vp-photo{width:48px;height:48px;border-radius:50%;overflow:hidden;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:1.6rem;}
+.sb-name{font-family:var(--font2);font-weight:600;font-size:.8rem;color:var(--text);text-align:center;line-height:1.2;text-shadow:0 1px 4px rgba(0,0,0,.6);}
+.sb-country{font-size:.55rem;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;text-shadow:0 1px 4px rgba(0,0,0,.6);}
+.vp-photo{width:48px;height:48px;border-radius:50%;overflow:hidden;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:1.6rem;border:2px solid var(--gold2);box-shadow:0 2px 10px rgba(0,0,0,.4);}
 .vp-photo img{width:100%;height:100%;object-fit:cover;}
 .sb-score-col{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -1423,31 +1435,35 @@ body::before{
         <div class="status-pill status-0">Duelo não iniciado</div>
       </div>
       <div class="scoreboard">
-        <div class="sb-player" id="sbPlayerA" style="position:relative;">
-          <div class="sb-flag" id="sbFlagA">🏳</div>
-          <div class="sb-name" id="sbNameA">—</div>
-          <div class="sb-country" id="sbCountryA">—</div>
-          <button onclick="editPlayerInMatch('a')" style="position:absolute;top:5px;right:5px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);color:var(--blue);border-radius:3px;padding:2px 5px;cursor:pointer;font-size:.55rem;font-family:var(--font2);transition:all .15s;" onmouseover="this.style.background='rgba(96,165,250,.15)'" onmouseout="this.style.background='rgba(96,165,250,.08)'">✎</button>
-        </div>
-        <div class="sb-score-col">
-          <div class="sb-score-box" id="scoreBoxA">0</div>
-          <div class="sb-score-btns">
-            <button class="score-btn plus" onclick="adjustScore('a',1)">+</button>
-            <button class="score-btn minus" onclick="adjustScore('a',-1)">−</button>
+        <div class="sb-half" id="sbHalfA">
+          <div class="sb-player" id="sbPlayerA" style="position:relative;">
+            <div class="sb-flag" id="sbFlagA">🏳</div>
+            <div class="sb-name" id="sbNameA">—</div>
+            <div class="sb-country" id="sbCountryA">—</div>
+            <button onclick="editPlayerInMatch('a')" style="position:absolute;top:5px;right:5px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);color:var(--blue);border-radius:3px;padding:2px 5px;cursor:pointer;font-size:.55rem;font-family:var(--font2);transition:all .15s;z-index:2;" onmouseover="this.style.background='rgba(96,165,250,.15)'" onmouseout="this.style.background='rgba(96,165,250,.08)'">✎</button>
+          </div>
+          <div class="sb-score-col">
+            <div class="sb-score-box" id="scoreBoxA">0</div>
+            <div class="sb-score-btns">
+              <button class="score-btn plus" onclick="adjustScore('a',1)">+</button>
+              <button class="score-btn minus" onclick="adjustScore('a',-1)">−</button>
+            </div>
           </div>
         </div>
-        <div class="sb-score-col">
-          <div class="sb-score-box" id="scoreBoxB">0</div>
-          <div class="sb-score-btns">
-            <button class="score-btn plus" onclick="adjustScore('b',1)">+</button>
-            <button class="score-btn minus" onclick="adjustScore('b',-1)">−</button>
+        <div class="sb-half" id="sbHalfB">
+          <div class="sb-score-col">
+            <div class="sb-score-box" id="scoreBoxB">0</div>
+            <div class="sb-score-btns">
+              <button class="score-btn plus" onclick="adjustScore('b',1)">+</button>
+              <button class="score-btn minus" onclick="adjustScore('b',-1)">−</button>
+            </div>
           </div>
-        </div>
-        <div class="sb-player" id="sbPlayerB" style="position:relative;">
-          <div class="sb-flag" id="sbFlagB">🏳</div>
-          <div class="sb-name" id="sbNameB">—</div>
-          <div class="sb-country" id="sbCountryB">—</div>
-          <button onclick="editPlayerInMatch('b')" style="position:absolute;top:5px;right:5px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);color:var(--blue);border-radius:3px;padding:2px 5px;cursor:pointer;font-size:.55rem;font-family:var(--font2);transition:all .15s;" onmouseover="this.style.background='rgba(96,165,250,.15)'" onmouseout="this.style.background='rgba(96,165,250,.08)'">✎</button>
+          <div class="sb-player" id="sbPlayerB" style="position:relative;">
+            <div class="sb-flag" id="sbFlagB">🏳</div>
+            <div class="sb-name" id="sbNameB">—</div>
+            <div class="sb-country" id="sbCountryB">—</div>
+            <button onclick="editPlayerInMatch('b')" style="position:absolute;top:5px;right:5px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);color:var(--blue);border-radius:3px;padding:2px 5px;cursor:pointer;font-size:.55rem;font-family:var(--font2);transition:all .15s;z-index:2;" onmouseover="this.style.background='rgba(96,165,250,.15)'" onmouseout="this.style.background='rgba(96,165,250,.08)'">✎</button>
+          </div>
         </div>
       </div>
       <div class="action-grid" id="actionGrid">
@@ -2326,6 +2342,16 @@ function closeGroupMatchesModal(){
 
 // open group match in the same live-score modal
 let currentGroupMatch = null; // {gi, mi}
+// Define a bandeira de fundo de cada lado do placar (metade A / metade B)
+function setSbHalfFlags(playerA,playerB){
+  const halfA=document.getElementById('sbHalfA');
+  const halfB=document.getElementById('sbHalfB');
+  const codeA=oitFlagCode(playerA);
+  const codeB=oitFlagCode(playerB);
+  if(halfA) halfA.style.backgroundImage = codeA?`url(https://flagcdn.com/w320/${codeA}.png)`:'none';
+  if(halfB) halfB.style.backgroundImage = codeB?`url(https://flagcdn.com/w320/${codeB}.png)`:'none';
+}
+
 function openGroupMatch(gi, mi){
   const g=groups[gi];const m=g.matches[mi];
   currentGroupMatch={gi,mi};currentMatchIdx=null;
@@ -2335,6 +2361,7 @@ function openGroupMatch(gi, mi){
   const pB=m.b.photo?`<div class="vp-photo" style="margin:0 auto .3rem;"><img src="${m.b.photo}"></div>`:`<div class="vp-photo" style="margin:0 auto .3rem;"><span>${m.b.flag}</span></div>`;
   document.getElementById('sbPlayerA').innerHTML=`${pA}<div class="sb-flag">${m.a.flag}</div><div class="sb-name">${m.a.name}</div><div class="sb-country">${m.a.country}</div>`;
   document.getElementById('sbPlayerB').innerHTML=`${pB}<div class="sb-flag">${m.b.flag}</div><div class="sb-name">${m.b.name}</div><div class="sb-country">${m.b.country}</div>`;
+  setSbHalfFlags(m.a,m.b);
   document.getElementById('winLabelA').textContent=m.a.name;
   document.getElementById('winLabelB').textContent=m.b.name;
   document.getElementById('extraNameA').textContent=m.a.name;
@@ -2508,6 +2535,7 @@ function openMatch(rIdx,mIdx){
   const pB=m.b.photo?`<div class="vp-photo" style="margin:0 auto .3rem;"><img src="${m.b.photo}"></div>`:`<div class="vp-photo" style="margin:0 auto .3rem;"><span>${m.b.flag}</span></div>`;
   document.getElementById('sbPlayerA').innerHTML=`${pA}<div class="sb-flag">${m.a.flag}</div><div class="sb-name">${m.a.name}</div><div class="sb-country">${m.a.country}</div>`;
   document.getElementById('sbPlayerB').innerHTML=`${pB}<div class="sb-flag">${m.b.flag}</div><div class="sb-name">${m.b.name}</div><div class="sb-country">${m.b.country}</div>`;
+  setSbHalfFlags(m.a,m.b);
   document.getElementById('winLabelA').textContent=m.a.name;
   document.getElementById('winLabelB').textContent=m.b.name;
   document.getElementById('extraNameA').textContent=m.a.name;
