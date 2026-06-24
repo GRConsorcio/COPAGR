@@ -1176,6 +1176,41 @@ body::before{
 .sac-flag{flex-shrink:0;}
 .sac-flag img{width:20px;height:14px;border-radius:2px;}
 
+/* ── SORTEIO DAS OITAVAS — card de confronto (flag preenchendo o fundo) ── */
+.duel-card{
+  display:flex;align-items:stretch;width:100%;
+  border-radius:14px;overflow:hidden;border:1px solid var(--bd2);
+  background:var(--s2);
+}
+.duel-side{
+  flex:1;position:relative;min-height:180px;
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+  padding:1rem .5rem;background-size:cover;background-position:center;
+  transition:background-image .3s;
+}
+.duel-side::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(8,8,16,.30) 0%,rgba(8,8,16,.55) 55%,rgba(8,8,16,.93) 100%);
+}
+.duel-side.pending{background:var(--s2);}
+.duel-side.pending .duel-photo{
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.4rem;color:var(--muted2);background:var(--s3);
+}
+.duel-side-inner{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:.35rem;width:100%;}
+.duel-photo{
+  width:72px;height:72px;border-radius:50%;border:3px solid var(--gold2);
+  overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.5);background:var(--s3);
+}
+.duel-photo img{width:100%;height:100%;object-fit:cover;}
+.duel-name{font-family:var(--font2);font-weight:700;font-size:.85rem;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.7);text-align:center;line-height:1.2;}
+.duel-country{font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.85);text-shadow:0 1px 3px rgba(0,0,0,.7);}
+.duel-vs{
+  flex-shrink:0;width:38px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font2);font-weight:800;font-size:.75rem;color:var(--gold2);
+  background:var(--s1);border-left:1px solid var(--bd);border-right:1px solid var(--bd);
+}
+
 </style>
 </head>
 <body>
@@ -1236,6 +1271,7 @@ body::before{
     <div class="ctrl-bar">
       <button class="btn btn-primary" onclick="generateGroups()">Gerar Grupos</button>
       <button class="btn btn-outline" onclick="advanceToKnockout()" id="btnAdvKnockout" style="display:none;">Avançar para Mata-Mata</button>
+      <button class="btn btn-outline" onclick="openOitavasSorteio()" id="btnSortOitavas" style="display:none;border-color:rgba(212,168,71,.4);color:var(--gold2);">&#9670; Sortear Oitavas</button>
       <button class="btn btn-ghost" onclick="toggleSidebar()">
         Elenco <span class="sidebar-count" id="sidebarCount2" style="position:relative;top:auto;right:auto;display:inline-flex;margin-left:4px;">0</span>
       </button>
@@ -1876,6 +1912,7 @@ function generateGroups(){
   matchCount=0;
   sellers.forEach(s=>{if(s.status!=='eliminated'){s.wins=0;s.calls=0;s.fichas=0;}});
   document.getElementById('btnAdvKnockout').style.display='none';
+  document.getElementById('btnSortOitavas').style.display='none';
   renderGroups();
   updateStats();
   saveState();
@@ -2030,6 +2067,7 @@ function renderGroups(){
   // check if all matches done
   const allDone=groups.every(g=>g.matches.every(m=>m.winner||m.draw));
   document.getElementById('btnAdvKnockout').style.display=allDone?'':'none';
+  document.getElementById('btnSortOitavas').style.display=allDone?'':'none';
 
   let html=`<div class="groups-section-title">${groups.length} grupo${groups.length!==1?'s':''} · ${sellers.filter(s=>s.status==='alive').length} participantes</div>`;
   html+=`<div class="groups-grid">`;
@@ -3029,6 +3067,7 @@ async function resetCopa(){
   groups=[];groupsPhaseActive=false;editMode=false;swapSource=null;
   updateEditModeUI();document.getElementById('champBanner').classList.remove('show');
   document.getElementById('btnAdvKnockout').style.display='none';
+  document.getElementById('btnSortOitavas').style.display='none';
   renderGroups();renderBracket();renderSellers();updateStats();saveState();
 }
 async function resetAll(){
@@ -3039,6 +3078,7 @@ async function resetAll(){
   groups=[];groupsPhaseActive=false;editMode=false;swapSource=null;
   updateEditModeUI();document.getElementById('champBanner').classList.remove('show');
   document.getElementById('btnAdvKnockout').style.display='none';
+  document.getElementById('btnSortOitavas').style.display='none';
   renderGroups();renderBracket();renderSellers();updateStats();saveState();
 }
 
@@ -3368,6 +3408,279 @@ function srtApplyAll(){
   closeSorteio();
 }
 
+// ══════════════════════════════════════════════════════════════
+// SORTEIO DAS OITAVAS — sorteia confrontos só entre quem passou
+// (reaproveita o mesmo tambor/animação do sorteio de países, mas
+// sorteando jogadores e formando duplas em vez de atribuir país)
+// ══════════════════════════════════════════════════════════════
+let oitSelectedIds = new Set();
+let oitQueue       = [];   // jogadores restantes a sortear nesta sessão
+let oitPlayersAll  = [];   // pool completo dos selecionados (p/ "ruído" do tambor)
+let oitDone        = [];   // confrontos já definidos: {a,b,bye}
+let oitPending     = null; // jogador sorteado p/ Lado A, aguardando Lado B
+let oitIsRunning   = false;
+let oitTotalDuelos = 0;
+
+// classificados sugeridos a partir da fase de grupos (top 1 ou top 2 por grupo)
+function oitQualifiersDefault(){
+  const ids = new Set();
+  if(!groups.length) return ids;
+  groups.forEach(g=>{
+    const {sorted} = computeGroupStandings(g);
+    const qualN = g.players.length>=4?2:1;
+    sorted.slice(0,qualN).forEach(p=>ids.add(p.id));
+  });
+  return ids;
+}
+
+function openOitavasSorteio(){
+  const pool = sellers.filter(s=>s.status!=='eliminated');
+  if(pool.length<2){ alert('Precisa de pelo menos 2 participantes!'); return; }
+  oitSelectedIds = oitQualifiersDefault();
+  renderOitSelectList();
+  document.getElementById('oitSelectStep').style.display='flex';
+  document.getElementById('oitDrawStep').style.display='none';
+  document.getElementById('oitFinalStep').style.display='none';
+  document.getElementById('oitavasOverlay').classList.add('open');
+}
+function closeOitavas(){
+  document.getElementById('oitavasOverlay').classList.remove('open');
+  oitIsRunning=false;
+}
+
+function renderOitSelectList(){
+  const pool = sellers.filter(s=>s.status!=='eliminated');
+  const wrap = document.getElementById('oitSelectList');
+  wrap.innerHTML = pool.map(s=>{
+    const checked = oitSelectedIds.has(s.id);
+    return `<div class="sorteio-queue-item ${checked?'current':''}" style="cursor:pointer;" onclick="oitToggleSel(${s.id})">
+      <div class="sqi-avatar">${s.photo?`<img src="${s.photo}">`:(s.flag||s.name[0])}</div>
+      <div class="sqi-name">${s.name}</div>
+      <div class="sqi-flag">${s.flag||''} ${s.country?`<span style="margin-left:.25rem;">${s.country}</span>`:''}</div>
+      <input type="checkbox" ${checked?'checked':''} style="margin-left:.6rem;width:16px;height:16px;accent-color:var(--gold);pointer-events:none;">
+    </div>`;
+  }).join('');
+  updateOitSelectCount();
+}
+function oitToggleSel(id){
+  if(oitSelectedIds.has(id)) oitSelectedIds.delete(id); else oitSelectedIds.add(id);
+  renderOitSelectList();
+}
+function oitSelectAllVisible(val){
+  const pool = sellers.filter(s=>s.status!=='eliminated');
+  oitSelectedIds = val ? new Set(pool.map(s=>s.id)) : new Set();
+  renderOitSelectList();
+}
+function updateOitSelectCount(){
+  const n = oitSelectedIds.size;
+  const duelos = Math.floor(n/2);
+  const bye = n%2===1;
+  const el = document.getElementById('oitSelectCount');
+  el.textContent = n===0 ? 'Nenhum classificado marcado' :
+    `${n} classificado${n!==1?'s':''} → ${duelos} confronto${duelos!==1?'s':''}${bye?' + 1 bye':''}`;
+  document.getElementById('oitBtnStart').disabled = n<2;
+}
+
+function startOitavasDraw(){
+  if(oitSelectedIds.size<2){ alert('Selecione pelo menos 2 classificados!'); return; }
+  oitPlayersAll  = sellers.filter(s=>oitSelectedIds.has(s.id)).map(s=>({...s}));
+  oitQueue       = shuffle([...oitPlayersAll]);
+  oitDone        = [];
+  oitPending     = null;
+  oitIsRunning   = false;
+  oitTotalDuelos = Math.ceil(oitPlayersAll.length/2);
+
+  document.getElementById('oitSelectStep').style.display='none';
+  document.getElementById('oitFinalStep').style.display='none';
+  document.getElementById('oitDrawStep').style.display='flex';
+
+  resetOitDuelCard();
+  updateOitDrawCounter();
+  document.getElementById('oitSpinning').classList.remove('show');
+  document.getElementById('oitDrumWrap').style.display='block';
+  const btn=document.getElementById('oitBtnNext');
+  btn.style.display='';
+  btn.textContent='Sortear 1º Nome';
+  btn.onclick=oitNext;
+}
+
+function resetOitDuelCard(){
+  ['oitSideA','oitSideB'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.classList.add('pending');
+    el.style.backgroundImage='none';
+    el.innerHTML=`<div class="duel-side-inner"><div class="duel-photo">?</div><div class="duel-name">—</div></div>`;
+  });
+}
+function updateOitDrawCounter(){
+  document.getElementById('oitDrawCounter').textContent=`Confronto ${oitDone.length+1} de ${oitTotalDuelos}`;
+}
+
+function oitDrumItemHTML(p,isCenter){
+  const av = p.photo
+    ? `<div style="width:22px;height:22px;border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="${p.photo}" style="width:100%;height:100%;object-fit:cover;"></div>`
+    : `<div style="width:22px;height:22px;border-radius:50%;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--s3);font-size:.7rem;">${p.flag||p.name[0]}</div>`;
+  return `<div class="sorteio-drum-item ${isCenter?'center':''}">${av} ${p.name}</div>`;
+}
+
+function oitFlagCode(p){
+  const found = SORTEIO_PAISES.find(c=>c.name===p.country);
+  return found ? found.code : null;
+}
+function oitFillSide(elId,p){
+  const el=document.getElementById(elId);
+  const code=oitFlagCode(p);
+  el.classList.remove('pending');
+  el.style.backgroundImage = code ? `url(https://flagcdn.com/w320/${code}.png)` : 'none';
+  const photoHtml = p.photo ? `<img src="${p.photo}">` : `<span style="font-size:1.6rem;display:flex;align-items:center;justify-content:center;height:100%;">${p.flag||p.name[0]}</span>`;
+  el.innerHTML = `<div class="duel-side-inner">
+    <div class="duel-photo">${photoHtml}</div>
+    <div class="duel-name">${p.name}</div>
+    <div class="duel-country">${p.country||'—'}</div>
+  </div>`;
+}
+
+function oitNext(){
+  if(oitIsRunning || oitQueue.length===0) return;
+  oitIsRunning=true;
+  const drawn=oitQueue.shift();
+  document.getElementById('oitSpinning').classList.add('show');
+  document.getElementById('oitBtnNext').style.display='none';
+  document.getElementById('oitDrumWrap').style.display='block';
+  oitRunSpin(drawn, ()=>oitReveal(drawn));
+}
+
+function oitRunSpin(target,onComplete){
+  const drum=document.getElementById('oitDrum');
+  const ITEM_H=36;
+  const CENTER_OFFSET=55-ITEM_H/2; // =37
+
+  const spinPool=shuffle([...oitPlayersAll,...oitPlayersAll,...oitPlayersAll]);
+  const allItems=[];
+  for(let i=0;i<40;i++) allItems.push(spinPool[i%spinPool.length]);
+  const others = oitPlayersAll.filter(p=>p.id!==target.id);
+  const before = others.length ? shuffle(others).slice(0,3) : [target];
+  const after  = others.length ? shuffle(others).slice(0,3) : [target];
+  allItems.push(...before);
+  allItems.push(target);
+  allItems.push(...after);
+  const centerIdx = 40+3;
+
+  drum.style.transition='none';
+  drum.innerHTML = allItems.map((p,i)=>oitDrumItemHTML(p,i===centerIdx)).join('');
+
+  const startY=CENTER_OFFSET;
+  const targetY=-(centerIdx*ITEM_H)+CENTER_OFFSET;
+  drum.style.transform=`translateY(${startY}px)`;
+  drum.getBoundingClientRect();
+
+  let startTime=null;
+  const DURATION=3200;
+  const totalDist=startY-targetY;
+
+  function animateDrum(ts){
+    if(!startTime) startTime=ts;
+    const elapsed=ts-startTime;
+    const t=Math.min(elapsed/DURATION,1);
+    let eased;
+    if(t<0.1){ eased=(t/0.1)*0.1*0.3; }
+    else if(t<0.7){ eased=0.03+((t-0.1)/0.6)*0.67; }
+    else { const sub=(t-0.7)/0.3; eased=0.7-Math.pow(sub-1,3)*0.3; }
+    eased=Math.min(eased,1);
+    drum.style.transform=`translateY(${startY-totalDist*eased}px)`;
+    if(t<1){ requestAnimationFrame(animateDrum); }
+    else { drum.style.transform=`translateY(${targetY}px)`; onComplete(); }
+  }
+  requestAnimationFrame(animateDrum);
+}
+
+function oitReveal(player){
+  oitIsRunning=false;
+  document.getElementById('oitSpinning').classList.remove('show');
+  document.getElementById('oitDrumWrap').style.display='none';
+  const btn=document.getElementById('oitBtnNext');
+  btn.style.display='';
+
+  if(!oitPending){
+    // Lado A revelado — falta sortear o adversário
+    oitPending=player;
+    oitFillSide('oitSideA',player);
+    if(oitQueue.length>0){
+      btn.textContent='Sortear Adversário →';
+      btn.onclick=oitNext;
+    } else {
+      // sobrou número ímpar — esse nome avança direto, sem adversário
+      btn.textContent='Concluir (Bye) →';
+      btn.onclick=oitFinishByeAndContinue;
+    }
+  } else {
+    // Lado B revelado — confronto completo
+    oitFillSide('oitSideB',player);
+    oitDone.push({a:oitPending,b:player,bye:false});
+    oitPending=null;
+    if(oitQueue.length>0){
+      btn.textContent='Próximo Confronto →';
+      btn.onclick=oitGoToNextDuel;
+    } else {
+      btn.textContent='Ver Confrontos Finais';
+      btn.onclick=oitShowFinalSummary;
+    }
+  }
+}
+function oitGoToNextDuel(){
+  resetOitDuelCard();
+  updateOitDrawCounter();
+  oitNext();
+}
+function oitFinishByeAndContinue(){
+  oitDone.push({a:oitPending,b:null,bye:true});
+  oitPending=null;
+  oitShowFinalSummary();
+}
+
+function oitShowFinalSummary(){
+  document.getElementById('oitDrawStep').style.display='none';
+  document.getElementById('oitFinalStep').style.display='flex';
+  const list=document.getElementById('oitFinalList');
+  list.innerHTML = oitDone.map(d=>{
+    const avA = d.a.photo?`<img src="${d.a.photo}">`:(d.a.flag||d.a.name[0]);
+    if(d.bye){
+      return `<div class="sorteio-assign-card" style="width:100%;">
+        <div class="sac-avatar">${avA}</div>
+        <div class="sac-info"><div class="sac-name">${d.a.name}</div><div class="sac-country">Bye — avança direto pras oitavas</div></div>
+      </div>`;
+    }
+    const avB = d.b.photo?`<img src="${d.b.photo}">`:(d.b.flag||d.b.name[0]);
+    return `<div class="sorteio-assign-card" style="width:100%;display:flex;align-items:center;gap:.6rem;">
+      <div class="sac-avatar">${avA}</div>
+      <div class="sac-info"><div class="sac-name">${d.a.name}</div><div class="sac-country">${d.a.country||'—'}</div></div>
+      <div style="font-family:var(--font2);font-size:.65rem;color:var(--gold3);font-weight:700;flex-shrink:0;">VS</div>
+      <div class="sac-info" style="text-align:right;"><div class="sac-name">${d.b.name}</div><div class="sac-country">${d.b.country||'—'}</div></div>
+      <div class="sac-avatar">${avB}</div>
+    </div>`;
+  }).join('');
+}
+
+function oitApply(){
+  if(!oitDone.length){ closeOitavas(); return; }
+  allRounds=[]; currentRoundIdx=0; matchCount=0;
+  const matches = oitDone.map(d=>{
+    const a = sellers.find(s=>s.id===d.a.id) || d.a;
+    const b = d.b ? (sellers.find(s=>s.id===d.b.id) || d.b) : null;
+    if(d.bye) return {a,b:null,winner:a,draw:false,bye:true,roundIdx:0,scoreA:0,scoreB:0};
+    return {a,b,winner:null,draw:false,bye:false,roundIdx:0,scoreA:0,scoreB:0};
+  });
+  allRounds.push(matches);
+
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===1));
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i===1));
+
+  const totalPlayers = oitDone.reduce((acc,d)=>acc+(d.b?2:1),0);
+  closeOitavas();
+  renderBracket();updateStats();saveState();
+  showPhaseAnimation('Oitavas de Final',totalPlayers,()=>{renderBracket();});
+}
+
 // ══ CLOUD SYNC ══
 function getState(){
   return{
@@ -3518,6 +3831,70 @@ function hideSplash(){const s=document.getElementById('loadingSplash');if(s)s.st
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- SORTEIO DAS OITAVAS -->
+<div class="sorteio-overlay" id="oitavasOverlay">
+  <div class="sorteio-bg-pulse"></div>
+
+  <!-- ETAPA 1: escolher manualmente os classificados -->
+  <div id="oitSelectStep" style="position:relative;z-index:1;width:min(560px,92vw);max-height:88vh;display:flex;flex-direction:column;">
+    <div class="sorteio-header">
+      <div class="sorteio-label">Copa GR · 2026</div>
+      <div class="sorteio-title" style="font-size:1.5rem;">Quem vai pras Oitavas?</div>
+    </div>
+    <div style="font-family:var(--font2);font-size:.68rem;color:var(--muted2);text-align:center;margin-bottom:.9rem;line-height:1.5;">
+      Marque manualmente todos os classificados. Depois disso o sorteio define os confrontos entre eles.
+    </div>
+    <div style="display:flex;gap:.5rem;justify-content:center;margin-bottom:.75rem;">
+      <button class="btn btn-ghost" style="font-size:.65rem;" onclick="oitSelectAllVisible(true)">Marcar Todos</button>
+      <button class="btn btn-ghost" style="font-size:.65rem;" onclick="oitSelectAllVisible(false)">Desmarcar Todos</button>
+    </div>
+    <div id="oitSelectList" class="sorteio-queue" style="max-height:40vh;"></div>
+    <div id="oitSelectCount" style="font-family:var(--font2);text-align:center;font-size:.7rem;color:var(--gold3);margin-top:.75rem;letter-spacing:.04em;"></div>
+    <div class="sorteio-controls" style="justify-content:center;margin-top:1.1rem;">
+      <button class="btn btn-primary" id="oitBtnStart" onclick="startOitavasDraw()" disabled style="min-width:170px;justify-content:center;">Sortear Confrontos</button>
+      <button class="btn btn-ghost" onclick="closeOitavas()" style="font-size:.65rem;">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- ETAPA 2: sorteio animado, confronto por confronto -->
+  <div id="oitDrawStep" style="display:none;position:relative;z-index:1;width:min(620px,94vw);flex-direction:column;align-items:center;">
+    <div class="sorteio-header">
+      <div class="sorteio-label" id="oitDrawCounter">Confronto 1 de 1</div>
+      <div class="sorteio-title" style="font-size:1.5rem;">Sorteio das Oitavas</div>
+    </div>
+
+    <div class="duel-card" id="oitDuelCard">
+      <div class="duel-side pending" id="oitSideA"><div class="duel-side-inner"><div class="duel-photo">?</div><div class="duel-name">—</div></div></div>
+      <div class="duel-vs">VS</div>
+      <div class="duel-side pending" id="oitSideB"><div class="duel-side-inner"><div class="duel-photo">?</div><div class="duel-name">—</div></div></div>
+    </div>
+
+    <div id="oitDrumWrap" class="sorteio-drum-wrap" style="margin-top:1.25rem;">
+      <div class="sorteio-drum-highlight"></div>
+      <div class="sorteio-drum" id="oitDrum"></div>
+    </div>
+
+    <div class="sorteio-controls">
+      <button class="btn btn-primary" id="oitBtnNext" onclick="oitNext()" style="min-width:180px;justify-content:center;">Sortear 1º Nome</button>
+      <div class="sorteio-spinning" id="oitSpinning"><span class="spin-dot"></span><span class="spin-dot"></span><span class="spin-dot"></span><span style="margin-left:2px;">Sorteando…</span></div>
+      <button class="btn btn-ghost" onclick="closeOitavas()" style="font-size:.65rem;">Fechar</button>
+    </div>
+  </div>
+
+  <!-- ETAPA 3: resumo final dos confrontos -->
+  <div id="oitFinalStep" style="display:none;position:relative;z-index:1;width:min(560px,92vw);max-height:88vh;flex-direction:column;">
+    <div class="sorteio-header">
+      <div class="sorteio-label">Copa GR · 2026</div>
+      <div class="sorteio-title" style="font-size:1.5rem;">Confrontos das Oitavas</div>
+    </div>
+    <div id="oitFinalList" style="width:100%;display:flex;flex-direction:column;gap:.5rem;max-height:50vh;overflow-y:auto;scrollbar-width:thin;"></div>
+    <div class="sorteio-controls" style="justify-content:center;margin-top:1.25rem;">
+      <button class="btn btn-primary" onclick="oitApply()" style="justify-content:center;">Aplicar e Gerar Chaveamento</button>
+      <button class="btn btn-ghost" onclick="closeOitavas()" style="font-size:.65rem;">Fechar sem aplicar</button>
+    </div>
   </div>
 </div>
 
