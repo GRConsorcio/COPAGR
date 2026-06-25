@@ -696,6 +696,12 @@ body::before{
 .scoreboard{
   display:flex;align-items:stretch;
   border-radius:var(--radius);overflow:hidden;border:1px solid var(--bd);margin-bottom:1rem;
+  position:relative;
+  animation:sb-border-glow 4s ease-in-out infinite;
+}
+@keyframes sb-border-glow{
+  0%,100%{box-shadow:0 0 0 rgba(212,168,71,0);}
+  50%{box-shadow:0 0 16px rgba(212,168,71,.16),inset 0 0 30px rgba(212,168,71,.04);}
 }
 .sb-half{
   flex:1;position:relative;display:grid;
@@ -708,11 +714,35 @@ body::before{
   content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
   background:linear-gradient(180deg,rgba(8,8,16,.45) 0%,rgba(8,8,16,.55) 50%,rgba(8,8,16,.72) 100%);
 }
+/* a bandeira continua até a borda em vez de ser cortada de forma seca pela
+   coluna do placar — some suavemente num degradê mais escuro à medida que se
+   aproxima do centro, passando por debaixo da pontuação */
+.sb-half:first-child::before{
+  background:
+    linear-gradient(180deg,rgba(8,8,16,.45) 0%,rgba(8,8,16,.55) 50%,rgba(8,8,16,.72) 100%),
+    linear-gradient(to right,rgba(6,6,14,0) 0%,rgba(6,6,14,.5) 68%,rgba(6,6,14,.88) 100%);
+}
+.sb-half:last-child::before{
+  background:
+    linear-gradient(180deg,rgba(8,8,16,.45) 0%,rgba(8,8,16,.55) 50%,rgba(8,8,16,.72) 100%),
+    linear-gradient(to left,rgba(6,6,14,0) 0%,rgba(6,6,14,.5) 68%,rgba(6,6,14,.88) 100%);
+}
 .sb-half>*{position:relative;z-index:1;}
-.sb-player{padding:.9rem .75rem;display:flex;flex-direction:column;align-items:center;gap:.25rem;transition:background .15s;}
+.sb-player{padding:.9rem .75rem;display:flex;flex-direction:column;align-items:center;gap:.25rem;transition:background .25s;position:relative;overflow:hidden;}
 .sb-player.sb-leading{background:rgba(212,168,71,.12);}
 .sb-player.sb-trailing{background:rgba(0,0,0,.35);}
 .sb-player.sb-draw{background:rgba(251,146,60,.05);}
+/* brilho sutil que percorre o lado que está na frente — dá mais vida ao placar */
+.sb-player.sb-leading::after{
+  content:'';position:absolute;top:0;left:-60%;width:35%;height:100%;
+  background:linear-gradient(100deg,transparent 0%,rgba(255,255,255,.16) 50%,transparent 100%);
+  animation:sb-sheen 2.8s ease-in-out infinite;
+  pointer-events:none;
+}
+@keyframes sb-sheen{
+  0%{left:-60%;}
+  100%{left:140%;}
+}
 .sb-flag{font-size:2rem;line-height:1;}
 .sb-name{font-family:var(--font2);font-weight:600;font-size:.8rem;color:var(--text);text-align:center;line-height:1.2;text-shadow:0 1px 4px rgba(0,0,0,.6);}
 .sb-country{font-size:.55rem;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;text-shadow:0 1px 4px rgba(0,0,0,.6);}
@@ -720,12 +750,25 @@ body::before{
 .vp-photo img{width:100%;height:100%;object-fit:cover;}
 .sb-score-col{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  background:var(--s3);border-left:1px solid var(--bd);border-right:1px solid var(--bd);
+  position:relative;
+  /* transparente o suficiente para deixar a bandeira (já escurecida pelo
+     degradê acima) atravessar por debaixo da pontuação, em vez de um bloco
+     sólido cortando a imagem */
+  background:linear-gradient(180deg,rgba(6,6,14,.58) 0%,rgba(6,6,14,.8) 100%);
+  border-left:1px solid rgba(255,255,255,.05);border-right:1px solid rgba(255,255,255,.05);
   gap:5px;padding:.5rem;
+  backdrop-filter:blur(2px);
 }
 .sb-score-box{
   font-family:var(--font2);font-size:2.2rem;font-weight:800;line-height:1;
   color:var(--gold2);min-width:32px;text-align:center;
+  transition:transform .15s ease;
+}
+.sb-score-box.pop{animation:sb-pop .35s ease;}
+@keyframes sb-pop{
+  0%{transform:scale(1);text-shadow:0 0 0 rgba(240,199,90,0);}
+  40%{transform:scale(1.4);text-shadow:0 0 14px rgba(240,199,90,.75);}
+  100%{transform:scale(1);text-shadow:0 0 0 rgba(240,199,90,0);}
 }
 .sb-score-btns{display:flex;gap:3px;}
 .score-btn{
@@ -739,6 +782,7 @@ body::before{
 .score-btn.plus:hover{background:rgba(52,211,153,.12);border-color:var(--green);}
 .score-btn.minus{border-color:rgba(248,113,113,.35);color:var(--red);}
 .score-btn.minus:hover{background:rgba(248,113,113,.1);border-color:var(--red);}
+
 
 .match-status-row{margin-bottom:.9rem;}
 .status-pill{
@@ -2558,6 +2602,13 @@ function adjustScore(side,delta){
   else m.scoreB=Math.max(0,(m.scoreB||0)+delta);
   document.getElementById('scoreBoxA').textContent=m.scoreA;
   document.getElementById('scoreBoxB').textContent=m.scoreB;
+  // micro-animação de "pop" no número que mudou — dá feedback vivo ao clique
+  const poppedBox=document.getElementById(side==='a'?'scoreBoxA':'scoreBoxB');
+  if(poppedBox){
+    poppedBox.classList.remove('pop');
+    void poppedBox.offsetWidth; // força reflow para reiniciar a animação em cliques rápidos
+    poppedBox.classList.add('pop');
+  }
   m.winner=null;m.draw=false;
   updateModalStatus();
   if(currentGroupMatch!==null)renderGroups();else renderBracket();
