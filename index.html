@@ -715,6 +715,11 @@ body::before{
 .modal-nav-btn:hover{border-color:var(--gold3);color:var(--gold2);}
 .modal-nav-btn:active{transform:scale(.88);}
 .modal-nav-btn:disabled{opacity:.25;cursor:default;}
+.modal-cycle-btn{
+  width:auto;padding:0 8px;font-size:.58rem;font-family:var(--font2);
+  letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;
+}
+.modal-cycle-btn.active{border-color:var(--gold3);color:var(--gold2);background:rgba(212,168,71,.08);}
 .modal-nav-dots{display:flex;gap:4px;align-items:center;}
 .modal-nav-dot{width:6px;height:6px;border-radius:50%;background:var(--bd2);cursor:pointer;transition:all .25s;}
 .modal-nav-dot.active{background:var(--gold2);transform:scale(1.35);}
@@ -883,111 +888,6 @@ body::before{
 /* mini badge no card de vendedor */
 .mini-card-badge{font-size:.7rem;margin-left:2px;}
 .red-card-state span:first-child{color:var(--red)!important;}
-/* ── PAINEL DE DUELOS AO VIVO ── */
-.duel-panel{
-  width:300px;flex-shrink:0;background:var(--s1);border-left:1px solid var(--bd);
-  display:flex;flex-direction:column;max-height:calc(100vh - 120px);
-  position:sticky;top:120px;align-self:flex-start;overflow-y:auto;
-  scrollbar-width:thin;
-}
-.duel-panel-header{
-  padding:.75rem 1rem .5rem;border-bottom:1px solid var(--bd);
-  background:var(--s1);position:sticky;top:0;z-index:5;
-  display:flex;flex-direction:column;gap:.4rem;
-}
-.duel-panel-title{
-  font-family:var(--font2);font-size:.65rem;font-weight:700;
-  letter-spacing:.12em;text-transform:uppercase;color:var(--gold3);
-}
-.duel-panel-controls{display:flex;align-items:center;gap:.5rem;}
-.duel-panel-nav{
-  background:var(--s2);border:1px solid var(--bd);color:var(--text);
-  width:24px;height:24px;border-radius:6px;cursor:pointer;font-size:.9rem;
-  display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;
-}
-.duel-panel-nav:hover{border-color:var(--gold3);color:var(--gold2);}
-.duel-panel-dots{display:flex;gap:4px;align-items:center;flex:1;justify-content:center;flex-wrap:wrap;}
-.dp-dot{width:6px;height:6px;border-radius:50%;background:var(--bd2);transition:all .3s;cursor:pointer;}
-.dp-dot.active{background:var(--gold2);transform:scale(1.3);}
-.dp-dot.done{background:var(--green);}
-.duel-panel-auto-btn{
-  background:none;border:1px solid var(--bd);color:var(--muted2);
-  border-radius:6px;padding:2px 7px;cursor:pointer;font-size:.7rem;
-  font-family:var(--font2);transition:all .15s;
-}
-.duel-panel-auto-btn.active{border-color:var(--gold3);color:var(--gold2);}
-/* card do duelo em destaque */
-.duel-panel-card{padding:.75rem;border-bottom:1px solid var(--bd);}
-.dp-card-vs{
-  display:flex;align-items:stretch;border-radius:12px;overflow:hidden;
-  border:1px solid var(--bd2);position:relative;min-height:130px;
-  background:var(--s2);
-}
-.dp-side{
-  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:.3rem;padding:.8rem .5rem;position:relative;overflow:hidden;
-  background-size:cover;background-position:center;
-}
-.dp-side::before{
-  content:'';position:absolute;inset:0;
-  background:linear-gradient(180deg,rgba(8,8,16,.55) 0%,rgba(8,8,16,.7) 100%);
-  z-index:0;
-}
-.dp-side:first-child::before{
-  background:linear-gradient(180deg,rgba(8,8,16,.55),rgba(8,8,16,.7)),
-    linear-gradient(to right,rgba(6,6,14,.05),rgba(6,6,14,.88));
-}
-.dp-side:last-child::before{
-  background:linear-gradient(180deg,rgba(8,8,16,.55),rgba(8,8,16,.7)),
-    linear-gradient(to left,rgba(6,6,14,.05),rgba(6,6,14,.88));
-}
-.dp-side>*{position:relative;z-index:1;}
-.dp-photo{width:44px;height:44px;border-radius:50%;border:2px solid var(--gold2);overflow:hidden;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:1.2rem;}
-.dp-photo img{width:100%;height:100%;object-fit:cover;}
-.dp-name{font-family:var(--font2);font-size:.72rem;font-weight:700;color:#fff;text-align:center;line-height:1.2;text-shadow:0 1px 4px rgba(0,0,0,.8);}
-.dp-country{font-size:.52rem;letter-spacing:.06em;color:rgba(255,255,255,.8);text-transform:uppercase;}
-.dp-score{font-family:var(--font2);font-size:1.1rem;font-weight:900;color:var(--gold2);line-height:1;}
-.dp-vs-sep{
-  flex-shrink:0;width:32px;display:flex;align-items:center;justify-content:center;
-  font-family:var(--font2);font-size:.7rem;font-weight:900;color:var(--gold2);
-  border-left:1px solid var(--bd);border-right:1px solid var(--bd);
-  background:linear-gradient(180deg,var(--s1),var(--s2));
-  position:relative;z-index:1;
-}
-.dp-badge{
-  position:absolute;top:6px;left:50%;transform:translateX(-50%);z-index:2;
-  font-family:var(--font2);font-size:.5rem;letter-spacing:.08em;text-transform:uppercase;
-  padding:2px 7px;border-radius:8px;font-weight:700;
-}
-.dp-badge.live{background:var(--red);color:#fff;animation:pulse-live 2s infinite;}
-.dp-badge.done{background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3);}
-.dp-badge.pending{background:rgba(255,255,255,.06);color:var(--muted2);border:1px solid var(--bd);}
-.dp-status-row{
-  text-align:center;font-size:.6rem;color:var(--muted2);margin-top:.4rem;
-  font-family:var(--font2);letter-spacing:.04em;
-}
-/* lista de todos os duelos */
-.duel-panel-list{padding:.5rem .75rem;display:flex;flex-direction:column;gap:.3rem;}
-.dp-list-title{font-family:var(--font2);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:.3rem 0 .4rem;}
-.dp-list-row{
-  display:flex;align-items:center;gap:.4rem;padding:.4rem .5rem;
-  border-radius:6px;background:var(--s2);border:1px solid transparent;
-  cursor:pointer;transition:all .15s;
-}
-.dp-list-row:hover{border-color:var(--bd2);}
-.dp-list-row.active-row{border-color:var(--gold3);background:rgba(212,168,71,.06);}
-.dp-list-avatar{width:22px;height:22px;border-radius:50%;overflow:hidden;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:.7rem;flex-shrink:0;}
-.dp-list-avatar img{width:100%;height:100%;object-fit:cover;}
-.dp-list-name{flex:1;font-size:.68rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.dp-list-score{font-family:var(--font2);font-size:.72rem;font-weight:700;color:var(--gold2);flex-shrink:0;}
-.dp-list-vs{font-size:.55rem;color:var(--muted);flex-shrink:0;padding:0 2px;}
-.dp-list-status{font-size:.5rem;padding:1px 5px;border-radius:4px;flex-shrink:0;font-family:var(--font2);letter-spacing:.05em;}
-.dp-list-status.done{background:rgba(52,211,153,.12);color:var(--green);}
-.dp-list-status.live{background:rgba(248,113,113,.15);color:var(--red);}
-.dp-list-status.pend{background:rgba(255,255,255,.05);color:var(--muted2);}
-@keyframes dpSlide{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:translateX(0)}}
-.dp-card-vs{animation:dpSlide .3s cubic-bezier(.22,1,.36,1);}
- */
 /* O sb-half já tem um ::before com gradiente, mas era pouco suficiente —
    agora o fundo da bandeira some suavemente para os cantos com um radial */
 .sb-half::after{
@@ -1602,26 +1502,6 @@ body::before{
           </div>
         </div>
       </div>
-
-      <!-- PAINEL DE DUELOS AO VIVO -->
-      <div class="duel-panel" id="duelPanel" style="display:none;">
-        <div class="duel-panel-header">
-          <div class="duel-panel-title" id="duelPanelTitle">Duelos da Fase</div>
-          <div class="duel-panel-controls">
-            <button class="duel-panel-nav" id="duelPanelPrev" onclick="duelPanelNav(-1)">‹</button>
-            <div class="duel-panel-dots" id="duelPanelDots"></div>
-            <button class="duel-panel-nav" id="duelPanelNext" onclick="duelPanelNav(1)">›</button>
-          </div>
-          <button class="duel-panel-auto-btn" id="duelPanelAutoBtn" onclick="toggleDuelPanelAuto()" title="Auto-rodar duelos">▶</button>
-        </div>
-        <div class="duel-panel-card" id="duelPanelCard">
-          <!-- preenchido pelo JS -->
-        </div>
-        <div class="duel-panel-list" id="duelPanelList">
-          <!-- lista resumida de todos os duelos -->
-        </div>
-      </div>
-
       <!-- SIDEBAR -->
       <div class="sidebar hidden" id="bracketSidebar">
         <div class="sidebar-header">
@@ -1722,6 +1602,7 @@ body::before{
         <div class="modal-title" id="matchModalTitle">Placar ao Vivo</div>
       </div>
       <div class="modal-nav-dots" id="modalNavDots"></div>
+      <button class="modal-nav-btn modal-cycle-btn" id="modalCycleBtn" onclick="toggleModalAutoCycle()" title="Pausar/Retomar auto-ciclo">▶ Auto</button>
       <button class="modal-nav-btn" id="modalNavNext" onclick="navigateMatch(1)" title="Próximo duelo">›</button>
       <button class="modal-close" onclick="closeModal()" style="margin-left:.5rem;">✕</button>
     </div>
@@ -2670,6 +2551,7 @@ function openGroupMatch(gi, mi){
   _fillModalContent();
   _buildModalNavDots();
   document.getElementById('matchModal').classList.add('open');
+  _startModalAutoCycle(); // começa a passar os duelos automaticamente
 }
 
 // ══ advanceToKnockout ══
@@ -2810,7 +2692,6 @@ function renderBracket(){
   html+='</div>';
   wrap.innerHTML=html;
   updateProgressStrip();
-  updateDuelPanel();
 }
 
 function updateProgressStrip(){
@@ -2835,12 +2716,12 @@ function openMatch(rIdx,mIdx){
   const m=allRounds[rIdx][mIdx];
   if(!m||m.bye)return;
   currentMatchIdx={rIdx,mIdx};currentGroupMatch=null;
-  // limpa classe de slide para entrada limpa
   const body=document.getElementById('modalBody');
   if(body){body.classList.remove('slide-in-right','slide-in-left');}
   _fillModalContent();
   _buildModalNavDots();
   document.getElementById('matchModal').classList.add('open');
+  _startModalAutoCycle(); // começa a passar os duelos automaticamente
 }
 
 function _buildModalNavDots(){
@@ -2882,6 +2763,7 @@ function _buildModalNavDots(){
 
 // dir: -1=prev, +1=next, 0=direto (targetIdx fornecido)
 function navigateMatch(dir,targetIdx,isGroup){
+  _saveMatchCartoesToMatch(); // salva cartões da partida atual antes de trocar
   const body=document.getElementById('modalBody');
 
   if(currentMatchIdx!==null){
@@ -2946,7 +2828,7 @@ function _fillModalContent(){
   document.getElementById('extraNameB').textContent=m.b.name;
   document.getElementById('scoreBoxA').textContent=m.scoreA||0;
   document.getElementById('scoreBoxB').textContent=m.scoreB||0;
-  _resetMatchCartoes();
+  _loadMatchCartoes(); // carrega os cartões já salvos nesta partida (não reseta)
   updateModalStatus();
 }
 
@@ -3032,12 +2914,12 @@ function finalizeMatch(result){
     m.winner=null;m.draw=false;
     if(result==='draw'){
       m.draw=true;
-      [m.a,m.b].forEach((p,idx)=>{const s=sellers.find(x=>x.id===p.id);if(s){s.wins++;const cEl=document.getElementById(idx===0?'cardNumA':'cardNumB');s.cartoes=(s.cartoes||0)+parseInt(cEl?.textContent||'0');}});
+      [m.a,m.b].forEach((p,idx)=>{const s=sellers.find(x=>x.id===p.id);if(s){s.wins++;const cart=idx===0?(m.cartoesA||0):(m.cartoesB||0);s.cartoes=(s.cartoes||0)+cart;}});
     } else {
       const winner=result==='a'?m.a:m.b;
       const loser=result==='a'?m.b:m.a;
       m.winner=winner;
-      const ws=sellers.find(s=>s.id===winner.id);if(ws){ws.wins++;const cEl=document.getElementById(result==='a'?'cardNumA':'cardNumB');ws.cartoes=(ws.cartoes||0)+parseInt(cEl?.textContent||'0');}
+      const ws=sellers.find(s=>s.id===winner.id);if(ws){ws.wins++;const cart=result==='a'?(m.cartoesA||0):(m.cartoesB||0);ws.cartoes=(ws.cartoes||0)+cart;}
     }
     matchCount++;
     updateModalStatus();_buildModalNavDots();
@@ -3053,13 +2935,13 @@ function finalizeMatch(result){
   if(result==='draw'){
     m.draw=true;m.winner=null;
     const sA=sellers.find(s=>s.id===m.a.id),sB=sellers.find(s=>s.id===m.b.id);
-    if(sA){sA.wins++;sA.cartoes=(sA.cartoes||0)+parseInt(document.getElementById('cardNumA')?.textContent||'0');}
-    if(sB){sB.wins++;sB.cartoes=(sB.cartoes||0)+parseInt(document.getElementById('cardNumB')?.textContent||'0');}
+    if(sA){sA.wins++;sA.cartoes=(sA.cartoes||0)+(m.cartoesA||0);}
+    if(sB){sB.wins++;sB.cartoes=(sB.cartoes||0)+(m.cartoesB||0);}
   } else {
     const winner=result==='a'?m.a:m.b,loser=result==='a'?m.b:m.a;
     m.winner=winner;
     const ws=sellers.find(s=>s.id===winner.id),ls=sellers.find(s=>s.id===loser.id);
-    if(ws){ws.wins++;ws.cartoes=(ws.cartoes||0)+parseInt(document.getElementById(result==='a'?'cardNumA':'cardNumB')?.textContent||'0');}
+    if(ws){ws.wins++;ws.cartoes=(ws.cartoes||0)+(result==='a'?(m.cartoesA||0):(m.cartoesB||0));}
     if(ls)ls.status='eliminated';
   }
   matchCount++;
@@ -3102,24 +2984,41 @@ function resetMatchScore(){
   renderSellers();updateStats();saveState();
 }
 
-function closeModal(){document.getElementById('matchModal').classList.remove('open');currentMatchIdx=null;currentGroupMatch=null;}
+function closeModal(){_stopModalAutoCycle();document.getElementById('matchModal').classList.remove('open');currentMatchIdx=null;currentGroupMatch=null;}
 function closeModalOverlay(e){if(e.target===document.getElementById('matchModal'))closeModal();}
 function closeChamp(){document.getElementById('champBanner').classList.remove('show');}
 
 // ══ CARTÕES ══
-// Armazena cartões da partida atual (reset a cada abertura)
-let _matchCartoesA=0, _matchCartoesB=0;
+// Armazena cartões no próprio objeto de partida (m.cartoesA / m.cartoesB)
+// para que persistam no saveState, mesmo ao navegar entre duelos sem salvar.
 function _resetMatchCartoes(){
   _matchCartoesA=0;_matchCartoesB=0;
   _updateCardDisplay('a');_updateCardDisplay('b');
 }
+function _loadMatchCartoes(){
+  // Carrega os cartões do objeto da partida atual (se já houver)
+  let m=_getCurrentMatch();
+  _matchCartoesA=(m?.cartoesA||0);
+  _matchCartoesB=(m?.cartoesB||0);
+  _updateCardDisplay('a');_updateCardDisplay('b');
+}
+function _saveMatchCartoesToMatch(){
+  let m=_getCurrentMatch();
+  if(m){m.cartoesA=_matchCartoesA;m.cartoesB=_matchCartoesB;}
+}
+function _getCurrentMatch(){
+  if(currentGroupMatch!==null){const{gi,mi}=currentGroupMatch;return groups[gi]?.matches[mi];}
+  if(currentMatchIdx!==null){const{rIdx,mIdx}=currentMatchIdx;return allRounds[rIdx]?.[mIdx];}
+  return null;
+}
+let _matchCartoesA=0, _matchCartoesB=0;
 function _updateCardDisplay(side){
   const num=side==='a'?_matchCartoesA:_matchCartoesB;
   const numEl=document.getElementById(side==='a'?'cardNumA':'cardNumB');
   const iconEl=document.getElementById(side==='a'?'cardIconA':'cardIconB');
   if(numEl){numEl.textContent=num;numEl.className='card-count'+(num>=2?' red':'');}
   if(iconEl){
-    iconEl.textContent=num>=2?'🟥':'🟨'; // amarelo até 1, vermelho a partir de 2
+    iconEl.textContent=num>=2?'🟥':'🟨';
     iconEl.classList.remove('pop');
     void iconEl.offsetWidth;
     if(num>0)iconEl.classList.add('pop');
@@ -3129,7 +3028,34 @@ function adjMatchCard(side,delta){
   if(side==='a'){_matchCartoesA=Math.max(0,_matchCartoesA+delta);}
   else {_matchCartoesB=Math.max(0,_matchCartoesB+delta);}
   _updateCardDisplay(side);
+  _saveMatchCartoesToMatch(); // salva imediatamente no objeto da partida
+  saveState();
 }
+
+// ══ AUTO-CICLO DE DUELOS NO MODAL ══
+let _modalAutoCycleTimer=null, _modalAutoCycleOn=false;
+
+function _startModalAutoCycle(){
+  _stopModalAutoCycle();
+  _modalAutoCycleOn=true;
+  _updateModalCycleBtn();
+  _modalAutoCycleTimer=setInterval(()=>{ navigateMatch(1); },3500);
+}
+function _stopModalAutoCycle(){
+  _modalAutoCycleOn=false;
+  if(_modalAutoCycleTimer){clearInterval(_modalAutoCycleTimer);_modalAutoCycleTimer=null;}
+  _updateModalCycleBtn();
+}
+function toggleModalAutoCycle(){
+  if(_modalAutoCycleOn)_stopModalAutoCycle(); else _startModalAutoCycle();
+}
+function _updateModalCycleBtn(){
+  const btn=document.getElementById('modalCycleBtn');
+  if(!btn)return;
+  btn.textContent=_modalAutoCycleOn?'⏸ Pausar':'▶ Auto';
+  btn.classList.toggle('active',_modalAutoCycleOn);
+}
+
 
 // ══ DESFILE DE DUELOS ══
 let _showcaseQueue=[],_showcaseIdx=0,_showcaseTimer=null,_showcaseOnDone=null;
@@ -3197,133 +3123,6 @@ function _closeShowcase(){
   if(_showcaseOnDone){const fn=_showcaseOnDone;_showcaseOnDone=null;fn();}
 }
 function skipDuelShowcase(){_closeShowcase();}
-
-// ══ PAINEL DE DUELOS AO VIVO ══
-let _dpIdx=0, _dpAutoTimer=null, _dpAutoOn=false;
-
-function updateDuelPanel(){
-  const panel=document.getElementById('duelPanel');
-  if(!panel)return;
-  if(!allRounds.length){panel.style.display='none';return;}
-  const round=allRounds[currentRoundIdx]||[];
-  const matches=round.filter(m=>!m.bye); // ignora byes
-  if(!matches.length){panel.style.display='none';return;}
-  panel.style.display='flex';
-
-  // título
-  const pCount=round.map(m=>m.bye?1:2).reduce((a,b)=>a+b,0);
-  const titleEl=document.getElementById('duelPanelTitle');
-  if(titleEl)titleEl.textContent=getRoundName(pCount)+' — Duelos';
-
-  // clamp index
-  if(_dpIdx>=matches.length)_dpIdx=0;
-
-  // render dots
-  const dotsEl=document.getElementById('duelPanelDots');
-  if(dotsEl){
-    dotsEl.innerHTML=matches.map((m,i)=>{
-      const done=m.winner||m.draw;
-      const live=!done&&(m.scoreA||m.scoreB);
-      return `<div class="dp-dot ${i===_dpIdx?'active':done?'done':''}" onclick="_dpGoTo(${i})" title="Duelo ${i+1}"></div>`;
-    }).join('');
-  }
-
-  // render card destaque
-  _renderDuelPanelCard(matches[_dpIdx],_dpIdx,matches.length);
-
-  // render lista
-  _renderDuelPanelList(matches);
-
-  // botão auto
-  const autoBtn=document.getElementById('duelPanelAutoBtn');
-  if(autoBtn){autoBtn.classList.toggle('active',_dpAutoOn);autoBtn.textContent=_dpAutoOn?'⏸':'▶';}
-}
-
-function _renderDuelPanelCard(m,idx,total){
-  const el=document.getElementById('duelPanelCard');
-  if(!el||!m)return;
-  const done=m.winner||m.draw, sA=m.scoreA||0, sB=m.scoreB||0;
-  const live=!done&&(sA>0||sB>0);
-  const badgeTxt=done?(m.draw?'Empate':'Finalizado'):live?'Ao Vivo':'Aguardando';
-  const badgeCls=done?'done':live?'live':'pending';
-
-  function sideHtml(p,score,isA){
-    const code=oitFlagCode(p);
-    const bgStyle=code?`background-image:url(https://flagcdn.com/w320/${code}.png);`:'';
-    const photoHtml=p.photo?`<img src="${p.photo}">`:`<span style="font-size:1rem">${p.flag||p.name[0]}</span>`;
-    const isWinner=done&&!m.draw&&m.winner&&m.winner.id===p.id;
-    const scoreColor=isWinner?'var(--green)':done&&!m.draw?'var(--muted2)':'var(--gold2)';
-    return `<div class="dp-side" style="${bgStyle}">
-      <div class="dp-photo">${photoHtml}</div>
-      <div class="dp-name">${p.name}</div>
-      <div class="dp-country">${p.country||'—'}</div>
-      ${sA>0||sB>0||done?`<div class="dp-score" style="color:${scoreColor}">${score}</div>`:''}
-    </div>`;
-  }
-
-  el.innerHTML=`
-    <div class="dp-card-vs">
-      <div class="dp-badge ${badgeCls}">${badgeTxt}</div>
-      ${sideHtml(m.a,sA,true)}
-      <div class="dp-vs-sep">VS</div>
-      ${sideHtml(m.b,sB,false)}
-    </div>
-    <div class="dp-status-row">Duelo ${idx+1} de ${total}</div>`;
-}
-
-function _renderDuelPanelList(matches){
-  const el=document.getElementById('duelPanelList');
-  if(!el)return;
-  let html=`<div class="dp-list-title">Todos os Duelos</div>`;
-  matches.forEach((m,i)=>{
-    const done=m.winner||m.draw;
-    const live=!done&&(m.scoreA||m.scoreB);
-    const stCls=done?'done':live?'live':'pend';
-    const stTxt=done?(m.draw?'Emp':'✓'):live?'Live':'—';
-    function mini(p,score){
-      const ph=p.photo?`<img src="${p.photo}">`:`<span style="font-size:.65rem">${p.flag||p.name[0]}</span>`;
-      return `<div class="dp-list-avatar">${ph}</div><div class="dp-list-name">${p.name}</div>`;
-    }
-    const sA=m.scoreA||0,sB=m.scoreB||0;
-    const showScore=done||(sA>0||sB>0);
-    html+=`<div class="dp-list-row ${i===_dpIdx?'active-row':''}" onclick="_dpGoTo(${i})">
-      ${mini(m.a,sA)}
-      <div class="dp-list-vs">vs</div>
-      ${mini(m.b,sB)}
-      ${showScore?`<div class="dp-list-score">${sA}–${sB}</div>`:''}
-      <div class="dp-list-status ${stCls}">${stTxt}</div>
-    </div>`;
-  });
-  el.innerHTML=html;
-}
-
-function _dpGoTo(i){
-  const round=allRounds[currentRoundIdx]||[];
-  const matches=round.filter(m=>!m.bye);
-  if(i<0)i=matches.length-1;
-  if(i>=matches.length)i=0;
-  _dpIdx=i;
-  updateDuelPanel();
-}
-function duelPanelNav(dir){_dpGoTo(_dpIdx+dir);}
-
-function toggleDuelPanelAuto(){
-  _dpAutoOn=!_dpAutoOn;
-  if(_dpAutoOn){_startDuelPanelAuto();}
-  else{if(_dpAutoTimer){clearInterval(_dpAutoTimer);_dpAutoTimer=null;}}
-  updateDuelPanel();
-}
-function _startDuelPanelAuto(){
-  if(_dpAutoTimer)clearInterval(_dpAutoTimer);
-  _dpAutoTimer=setInterval(()=>{
-    const round=allRounds[currentRoundIdx]||[];
-    const matches=round.filter(m=>!m.bye);
-    _dpIdx=(_dpIdx+1)%Math.max(1,matches.length);
-    updateDuelPanel();
-  },3000);
-}
-
-// ══ FIM PAINEL DE DUELOS ══
 
 
 function updateStats(){
