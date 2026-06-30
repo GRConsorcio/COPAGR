@@ -87,7 +87,8 @@ body::before{
 /* ── PAGES ── */
 .page{position:relative;z-index:1;}
 .panel{display:none;}
-.panel.active{display:block;}
+.panel.active{display:block;animation:panelEnter .32s cubic-bezier(.22,1,.36,1);}
+@keyframes panelEnter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
 /* ── CTRL BAR ── */
 .ctrl-bar{
@@ -102,6 +103,7 @@ body::before{
   cursor:pointer;transition:all .18s;border:1px solid;display:inline-flex;
   align-items:center;gap:.4rem;
 }
+.btn:active{transform:scale(.95);}
 .btn-primary{background:var(--gold);color:#000;border-color:var(--gold);}
 .btn-primary:hover{background:var(--gold2);box-shadow:0 0 16px var(--gold-glow);}
 .btn-outline{background:transparent;color:var(--gold);border-color:var(--bd2);}
@@ -524,7 +526,17 @@ body::before{
   background:var(--s2);border:1px solid var(--bd);
   border-radius:var(--radius);overflow:hidden;
   transition:all .18s;flex:1;position:relative;
+  animation:matchCardEnter .38s cubic-bezier(.22,1,.36,1) backwards;
 }
+@keyframes matchCardEnter{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+/* escalona a entrada dos primeiros cards — depois disso todos usam o mesmo delay
+   base pra não acumular atraso em chaveamentos com muitas partidas */
+.match:nth-child(1){animation-delay:.02s}
+.match:nth-child(2){animation-delay:.07s}
+.match:nth-child(3){animation-delay:.12s}
+.match:nth-child(4){animation-delay:.17s}
+.match:nth-child(5){animation-delay:.22s}
+.match:nth-child(n+6){animation-delay:.26s}
 .match::before{
   content:'';position:absolute;left:0;top:0;bottom:0;width:2px;
   background:var(--gold2);opacity:0;transition:opacity .18s;
@@ -675,12 +687,15 @@ body::before{
   position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.85);
   display:none;align-items:center;justify-content:center;backdrop-filter:blur(6px);
 }
-.modal-overlay.open{display:flex;}
+.modal-overlay.open{display:flex;animation:modalOverlayFade .22s ease;}
+@keyframes modalOverlayFade{from{opacity:0;backdrop-filter:blur(0)}to{opacity:1;backdrop-filter:blur(6px)}}
 .modal{
   background:var(--s2);border:1px solid var(--bd2);border-radius:var(--radius-lg);
   width:min(500px,96vw);max-height:92vh;overflow-y:auto;
   box-shadow:0 0 60px rgba(0,0,0,.8),0 0 30px rgba(212,168,71,.05);
+  animation:modalPop .3s cubic-bezier(.34,1.56,.64,1);
 }
+@keyframes modalPop{from{opacity:0;transform:translateY(18px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
 .modal-header{
   background:var(--s1);padding:1rem 1.25rem;
   border-bottom:1px solid var(--bd);
@@ -931,12 +946,18 @@ body::before{
   display:none;position:fixed;inset:0;z-index:700;
   background:rgba(0,0,0,.88);backdrop-filter:blur(8px);
   align-items:center;justify-content:center;flex-direction:column;gap:.75rem;
+  opacity:0;
 }
-.champ-banner.show{display:flex;}
-.champ-icon{font-size:3rem;margin-bottom:.5rem;}
-.champ-label{font-family:var(--font2);font-size:.65rem;letter-spacing:.2em;color:var(--gold3);text-transform:uppercase;}
-.champ-name{font-family:var(--font2);font-size:2.5rem;font-weight:800;color:var(--gold2);letter-spacing:.04em;}
-.champ-flag{font-size:3rem;}
+.champ-banner.show{display:flex;animation:champBgFade .4s ease forwards;}
+@keyframes champBgFade{from{opacity:0;backdrop-filter:blur(0)}to{opacity:1;backdrop-filter:blur(8px)}}
+.champ-icon{font-size:3rem;margin-bottom:.5rem;animation:champIconPop .6s cubic-bezier(.34,1.56,.64,1) .15s backwards;}
+.champ-label{font-family:var(--font2);font-size:.65rem;letter-spacing:.2em;color:var(--gold3);text-transform:uppercase;animation:champFadeUp .5s ease .3s backwards;}
+.champ-name{font-family:var(--font2);font-size:2.5rem;font-weight:800;color:var(--gold2);letter-spacing:.04em;
+  animation:champFadeUp .55s cubic-bezier(.22,1,.36,1) .45s backwards,champGlow 2.2s ease-in-out .9s infinite;}
+.champ-flag{font-size:3rem;animation:champFadeUp .5s ease .55s backwards;}
+@keyframes champIconPop{0%{opacity:0;transform:scale(0) rotate(-25deg)}60%{transform:scale(1.25) rotate(8deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes champFadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes champGlow{0%,100%{text-shadow:0 0 18px var(--gold-glow)}50%{text-shadow:0 0 38px var(--gold-glow),0 0 60px rgba(212,168,71,.4)}}
 
 /* ── PHASE OVERLAY ── */
 .phase-overlay{position:fixed;inset:0;z-index:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.75rem;pointer-events:none;opacity:0;transition:opacity .25s;}
@@ -990,10 +1011,11 @@ body::before{
   position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.8);
   display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);
 }
-.confirm-overlay.open{display:flex;}
+.confirm-overlay.open{display:flex;animation:modalOverlayFade .2s ease;}
 .confirm-box{
   background:var(--s2);border:1px solid var(--bd2);border-radius:var(--radius-lg);
   padding:1.5rem;width:min(380px,92vw);
+  animation:modalPop .28s cubic-bezier(.34,1.56,.64,1);
 }
 .confirm-title{font-family:var(--font2);font-size:1rem;font-weight:700;margin-bottom:.5rem;}
 .confirm-msg{font-size:.82rem;color:var(--muted2);line-height:1.55;margin-bottom:1.25rem;}
@@ -2593,13 +2615,18 @@ function openMatch(rIdx,mIdx){
 
 function adjustScore(side,delta){
   let m;
+  let isKnockout=false;
   if(currentGroupMatch!==null){
     const {gi,mi}=currentGroupMatch;m=groups[gi].matches[mi];
   } else if(currentMatchIdx!==null){
     const {rIdx,mIdx}=currentMatchIdx;m=allRounds[rIdx][mIdx];
+    isKnockout=true;
   } else return;
-  if(side==='a')m.scoreA=Math.max(0,(m.scoreA||0)+delta);
-  else m.scoreB=Math.max(0,(m.scoreB||0)+delta);
+  // MUDANÇA: pontos negativos agora são permitidos no Mata-Mata (a pedido) —
+  // a fase de grupos continua travada em 0 como antes, só o chaveamento eliminatório
+  // deixa o placar ir negativo.
+  if(side==='a')m.scoreA=isKnockout?((m.scoreA||0)+delta):Math.max(0,(m.scoreA||0)+delta);
+  else m.scoreB=isKnockout?((m.scoreB||0)+delta):Math.max(0,(m.scoreB||0)+delta);
   document.getElementById('scoreBoxA').textContent=m.scoreA;
   document.getElementById('scoreBoxB').textContent=m.scoreB;
   // micro-animação de "pop" no número que mudou — dá feedback vivo ao clique
@@ -3851,8 +3878,18 @@ function saveState(){
 }
 window.__loadStateFromCloud=function(data){
   if(!data||!data.sellers)return;
-  const localRaw=localStorage.getItem('copa_gr_v2_state');
-  const localTs=localRaw?(JSON.parse(localRaw).ts||0):0;
+  // BUGFIX: JSON.parse aqui não tinha try/catch — se o localStorage tivesse algo
+  // corrompido/parcial (ex: gravação interrompida por aba fechada no meio do save),
+  // isso quebrava essa função inteira silenciosamente e o estado vindo da nuvem
+  // nunca era aplicado, travando o app na versão local desatualizada.
+  let localTs=0;
+  try{
+    const localRaw=localStorage.getItem('copa_gr_v2_state');
+    localTs=localRaw?(JSON.parse(localRaw).ts||0):0;
+  }catch(e){
+    console.warn('Estado local corrompido, ignorando para aplicar o da nuvem:',e);
+    localTs=0;
+  }
   const remoteTs=data.ts||0;
   if(remoteTs>=localTs){
     if(applyState(data)){
