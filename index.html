@@ -705,7 +705,30 @@ body::before{
 .modal-title{font-family:var(--font2);font-size:1rem;font-weight:700;color:var(--gold2);}
 .modal-close{background:none;border:none;color:var(--muted2);font-size:1.1rem;cursor:pointer;transition:color .15s;line-height:1;padding:2px;}
 .modal-close:hover{color:var(--red);}
+/* setas de navegação entre duelos */
+.modal-nav-btn{
+  background:none;border:1px solid var(--bd);color:var(--muted2);
+  width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:1.1rem;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .18s;flex-shrink:0;line-height:1;
+}
+.modal-nav-btn:hover{border-color:var(--gold3);color:var(--gold2);}
+.modal-nav-btn:active{transform:scale(.88);}
+.modal-nav-btn:disabled{opacity:.25;cursor:default;}
+.modal-nav-dots{display:flex;gap:4px;align-items:center;}
+.modal-nav-dot{width:6px;height:6px;border-radius:50%;background:var(--bd2);cursor:pointer;transition:all .25s;}
+.modal-nav-dot.active{background:var(--gold2);transform:scale(1.35);}
+.modal-nav-dot.done{background:var(--green);}
+/* wrapper do body com overflow para o slide */
+.modal-body-wrap{overflow:hidden;position:relative;}
 .modal-body{padding:1.25rem;}
+/* animações de slide */
+@keyframes sbSlideInRight{from{opacity:0;transform:translateX(48px)}to{opacity:1;transform:translateX(0)}}
+@keyframes sbSlideInLeft{from{opacity:0;transform:translateX(-48px)}to{opacity:1;transform:translateX(0)}}
+@keyframes sbSlideOutLeft{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(-48px)}}
+@keyframes sbSlideOutRight{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(48px)}}
+.modal-body.slide-in-right{animation:sbSlideInRight .32s cubic-bezier(.22,1,.36,1);}
+.modal-body.slide-in-left{animation:sbSlideInLeft .32s cubic-bezier(.22,1,.36,1);}
 
 /* scoreboard */
 .scoreboard{
@@ -1693,13 +1716,17 @@ body::before{
 <div class="modal-overlay" id="matchModal" onclick="closeModalOverlay(event)">
   <div class="modal">
     <div class="modal-header">
-      <div>
+      <button class="modal-nav-btn" id="modalNavPrev" onclick="navigateMatch(-1)" title="Duelo anterior">‹</button>
+      <div style="flex:1;min-width:0;">
         <div class="modal-round" id="matchRoundLabel">Grupo A · Rodada 1</div>
         <div class="modal-title" id="matchModalTitle">Placar ao Vivo</div>
       </div>
-      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div class="modal-nav-dots" id="modalNavDots"></div>
+      <button class="modal-nav-btn" id="modalNavNext" onclick="navigateMatch(1)" title="Próximo duelo">›</button>
+      <button class="modal-close" onclick="closeModal()" style="margin-left:.5rem;">✕</button>
     </div>
-    <div class="modal-body">
+    <div class="modal-body-wrap" id="modalBodyWrap">
+    <div class="modal-body" id="modalBody">
       <div class="match-status-row" id="matchStatusRow">
         <div class="status-pill status-0">Duelo não iniciado</div>
       </div>
@@ -1768,6 +1795,7 @@ body::before{
         </div>
       </div>
     </div>
+    </div><!-- end modal-body-wrap -->
   </div>
 </div>
 
@@ -2636,23 +2664,11 @@ function setSbHalfFlags(playerA,playerB){
 }
 
 function openGroupMatch(gi, mi){
-  const g=groups[gi];const m=g.matches[mi];
   currentGroupMatch={gi,mi};currentMatchIdx=null;
-  document.getElementById('matchRoundLabel').textContent=`Grupo ${g.letter} · Partida ${mi+1}`;
-  document.getElementById('matchModalTitle').textContent=m.winner||m.draw?'Editar Resultado':'Placar ao Vivo';
-  const pA=m.a.photo?`<div class="vp-photo" style="margin:0 auto .3rem;"><img src="${m.a.photo}"></div>`:`<div class="vp-photo" style="margin:0 auto .3rem;"><span>${m.a.flag}</span></div>`;
-  const pB=m.b.photo?`<div class="vp-photo" style="margin:0 auto .3rem;"><img src="${m.b.photo}"></div>`:`<div class="vp-photo" style="margin:0 auto .3rem;"><span>${m.b.flag}</span></div>`;
-  document.getElementById('sbPlayerA').innerHTML=`${pA}<div class="sb-flag">${m.a.flag}</div><div class="sb-name">${m.a.name}</div><div class="sb-country">${m.a.country}</div>`;
-  document.getElementById('sbPlayerB').innerHTML=`${pB}<div class="sb-flag">${m.b.flag}</div><div class="sb-name">${m.b.name}</div><div class="sb-country">${m.b.country}</div>`;
-  setSbHalfFlags(m.a,m.b);
-  document.getElementById('winLabelA').textContent=m.a.name;
-  document.getElementById('winLabelB').textContent=m.b.name;
-  document.getElementById('extraNameA').textContent=m.a.name;
-  document.getElementById('extraNameB').textContent=m.b.name;
-  document.getElementById('scoreBoxA').textContent=m.scoreA||0;
-  document.getElementById('scoreBoxB').textContent=m.scoreB||0;
-  ['tb-calls-a','tb-calls-b','tb-fichas-a','tb-fichas-b'].forEach(id=>document.getElementById(id).value=0);
-  updateModalStatus();
+  const body=document.getElementById('modalBody');
+  if(body){body.classList.remove('slide-in-right','slide-in-left');}
+  _fillModalContent();
+  _buildModalNavDots();
   document.getElementById('matchModal').classList.add('open');
 }
 
@@ -2819,8 +2835,105 @@ function openMatch(rIdx,mIdx){
   const m=allRounds[rIdx][mIdx];
   if(!m||m.bye)return;
   currentMatchIdx={rIdx,mIdx};currentGroupMatch=null;
-  const pCount=allRounds[rIdx].map(x=>x.bye?1:2).reduce((a,b)=>a+b,0);
-  document.getElementById('matchRoundLabel').textContent=`${getRoundName(pCount)} · Duelo ${mIdx+1}`;
+  // limpa classe de slide para entrada limpa
+  const body=document.getElementById('modalBody');
+  if(body){body.classList.remove('slide-in-right','slide-in-left');}
+  _fillModalContent();
+  _buildModalNavDots();
+  document.getElementById('matchModal').classList.add('open');
+}
+
+function _buildModalNavDots(){
+  const dotsEl=document.getElementById('modalNavDots');
+  const prevBtn=document.getElementById('modalNavPrev');
+  const nextBtn=document.getElementById('modalNavNext');
+  if(!dotsEl)return;
+
+  if(currentMatchIdx!==null){
+    // BRACKET: dots dos duelos da rodada atual
+    const {rIdx,mIdx}=currentMatchIdx;
+    const round=allRounds[rIdx]||[];
+    const realMatches=round.map((m,i)=>({m,i})).filter(({m})=>!m.bye);
+    dotsEl.innerHTML=realMatches.map(({m,i})=>{
+      const done=m.winner||m.draw;
+      const isActive=i===mIdx;
+      return `<div class="modal-nav-dot ${isActive?'active':done?'done':''}" onclick="navigateMatch(0,${i})" title="Duelo ${realMatches.findIndex(x=>x.i===i)+1}"></div>`;
+    }).join('');
+    const realIdx=realMatches.findIndex(x=>x.i===mIdx);
+    if(prevBtn)prevBtn.disabled=realIdx<=0;
+    if(nextBtn)nextBtn.disabled=realIdx>=realMatches.length-1;
+
+  } else if(currentGroupMatch!==null){
+    // GRUPOS: dots das partidas do grupo atual
+    const {gi,mi}=currentGroupMatch;
+    const matches=groups[gi]?.matches||[];
+    dotsEl.innerHTML=matches.map((m,i)=>{
+      const done=m.winner||m.draw;
+      return `<div class="modal-nav-dot ${i===mi?'active':done?'done':''}" onclick="navigateMatch(0,${i},true)" title="Partida ${i+1}"></div>`;
+    }).join('');
+    if(prevBtn)prevBtn.disabled=mi<=0;
+    if(nextBtn)nextBtn.disabled=mi>=matches.length-1;
+  } else {
+    dotsEl.innerHTML='';
+    if(prevBtn)prevBtn.disabled=true;
+    if(nextBtn)nextBtn.disabled=true;
+  }
+}
+
+// dir: -1=prev, +1=next, 0=direto (targetIdx fornecido)
+function navigateMatch(dir,targetIdx,isGroup){
+  const body=document.getElementById('modalBody');
+
+  if(currentMatchIdx!==null){
+    const {rIdx,mIdx}=currentMatchIdx;
+    const round=allRounds[rIdx]||[];
+    const realMatches=round.map((m,i)=>({m,i})).filter(({m})=>!m.bye);
+    const curPos=realMatches.findIndex(x=>x.i===mIdx);
+    let newPos;
+    if(dir===0){newPos=realMatches.findIndex(x=>x.i===targetIdx);}
+    else{newPos=curPos+dir;}
+    if(newPos<0||newPos>=realMatches.length)return;
+    const newRealIdx=realMatches[newPos].i;
+    const newM=round[newRealIdx];
+    if(!newM||newM.bye)return;
+    // slide animation
+    if(body){body.classList.remove('slide-in-right','slide-in-left');void body.offsetWidth;body.classList.add(dir>=0?'slide-in-right':'slide-in-left');}
+    currentMatchIdx={rIdx,mIdx:newRealIdx};
+    _fillModalContent();
+    _buildModalNavDots();
+
+  } else if(currentGroupMatch!==null){
+    const {gi,mi}=currentGroupMatch;
+    const matches=groups[gi]?.matches||[];
+    const newMi=dir===0?targetIdx:mi+dir;
+    if(newMi<0||newMi>=matches.length)return;
+    const newM=matches[newMi];
+    if(!newM)return;
+    if(body){body.classList.remove('slide-in-right','slide-in-left');void body.offsetWidth;body.classList.add(dir>=0?'slide-in-right':'slide-in-left');}
+    currentGroupMatch={gi,mi:newMi};
+    _fillModalContent();
+    _buildModalNavDots();
+  }
+}
+
+// Preenche o conteúdo do modal com base em currentMatchIdx ou currentGroupMatch
+function _fillModalContent(){
+  let m;
+  if(currentMatchIdx!==null){
+    const {rIdx,mIdx}=currentMatchIdx;
+    m=allRounds[rIdx][mIdx];
+    if(!m)return;
+    const pCount=allRounds[rIdx].map(x=>x.bye?1:2).reduce((a,b)=>a+b,0);
+    const realMatches=allRounds[rIdx].filter(x=>!x.bye);
+    const duelNum=realMatches.indexOf(m)+1;
+    document.getElementById('matchRoundLabel').textContent=`${getRoundName(pCount)} · Duelo ${duelNum}`;
+  } else if(currentGroupMatch!==null){
+    const {gi,mi}=currentGroupMatch;
+    const g=groups[gi];m=g.matches[mi];
+    if(!m)return;
+    document.getElementById('matchRoundLabel').textContent=`Grupo ${g.letter} · Partida ${mi+1}`;
+  } else return;
+
   document.getElementById('matchModalTitle').textContent=m.winner||m.draw?'Editar Resultado':'Placar ao Vivo';
   const pA=m.a.photo?`<div class="vp-photo" style="margin:0 auto .3rem;"><img src="${m.a.photo}"></div>`:`<div class="vp-photo" style="margin:0 auto .3rem;"><span>${m.a.flag}</span></div>`;
   const pB=m.b.photo?`<div class="vp-photo" style="margin:0 auto .3rem;"><img src="${m.b.photo}"></div>`:`<div class="vp-photo" style="margin:0 auto .3rem;"><span>${m.b.flag}</span></div>`;
@@ -2835,8 +2948,23 @@ function openMatch(rIdx,mIdx){
   document.getElementById('scoreBoxB').textContent=m.scoreB||0;
   _resetMatchCartoes();
   updateModalStatus();
-  document.getElementById('matchModal').classList.add('open');
 }
+
+// ── swipe touch no modal ──
+(function(){
+  let _touchX=null;
+  document.addEventListener('touchstart',e=>{
+    if(!document.getElementById('matchModal')?.classList.contains('open'))return;
+    _touchX=e.changedTouches[0].clientX;
+  },{passive:true});
+  document.addEventListener('touchend',e=>{
+    if(_touchX===null||!document.getElementById('matchModal')?.classList.contains('open'))return;
+    const dx=e.changedTouches[0].clientX-_touchX;
+    _touchX=null;
+    if(Math.abs(dx)>50)navigateMatch(dx<0?1:-1);
+  },{passive:true});
+})();
+
 
 function adjustScore(side,delta){
   let m;
@@ -2912,7 +3040,7 @@ function finalizeMatch(result){
       const ws=sellers.find(s=>s.id===winner.id);if(ws){ws.wins++;const cEl=document.getElementById(result==='a'?'cardNumA':'cardNumB');ws.cartoes=(ws.cartoes||0)+parseInt(cEl?.textContent||'0');}
     }
     matchCount++;
-    updateModalStatus();
+    updateModalStatus();_buildModalNavDots();
     renderGroups();updateStats();
     saveState();
     return;
@@ -2935,7 +3063,7 @@ function finalizeMatch(result){
     if(ls)ls.status='eliminated';
   }
   matchCount++;
-  updateModalStatus();
+  updateModalStatus();_buildModalNavDots();
   const roundDone=allRounds[rIdx].every(x=>x.winner||x.bye||x.draw);
   if(roundDone){
     const advancers=allRounds[rIdx].map(m=>{if(m.draw)return[m.a,m.b];if(m.winner)return[m.winner];return[];}).flat();
