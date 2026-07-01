@@ -2910,16 +2910,25 @@ function finalizeMatch(result){
   if(currentGroupMatch!==null){
     const {gi,mi}=currentGroupMatch;
     const g=groups[gi];const m=g.matches[mi];
-    // undo previous
+    // AJUSTE: antes isso só zerava m.winner/m.draw sem desfazer a vitória já
+    // creditada ao vendedor — refazer o resultado de um duelo de grupo duplicava
+    // "wins". Cartão não é mais creditado aqui (ver adjMatchCard).
+    if(m.draw){
+      const oldA=sellers.find(x=>x.id===m.a.id),oldB=sellers.find(x=>x.id===m.b.id);
+      if(oldA&&oldA.wins>0)oldA.wins--;
+      if(oldB&&oldB.wins>0)oldB.wins--;
+    } else if(m.winner){
+      const prevW=sellers.find(x=>x.id===m.winner.id);
+      if(prevW&&prevW.wins>0)prevW.wins--;
+    }
     m.winner=null;m.draw=false;
     if(result==='draw'){
       m.draw=true;
-      [m.a,m.b].forEach((p,idx)=>{const s=sellers.find(x=>x.id===p.id);if(s){s.wins++;const cart=idx===0?(m.cartoesA||0):(m.cartoesB||0);s.cartoes=(s.cartoes||0)+cart;}});
+      [m.a,m.b].forEach(p=>{const s=sellers.find(x=>x.id===p.id);if(s)s.wins++;});
     } else {
       const winner=result==='a'?m.a:m.b;
-      const loser=result==='a'?m.b:m.a;
       m.winner=winner;
-      const ws=sellers.find(s=>s.id===winner.id);if(ws){ws.wins++;const cart=result==='a'?(m.cartoesA||0):(m.cartoesB||0);ws.cartoes=(ws.cartoes||0)+cart;}
+      const ws=sellers.find(s=>s.id===winner.id);if(ws)ws.wins++;
     }
     matchCount++;
     updateModalStatus();_buildModalNavDots();
@@ -2930,18 +2939,26 @@ function finalizeMatch(result){
   // bracket match
   if(currentMatchIdx===null)return;
   const {rIdx,mIdx}=currentMatchIdx;const m=allRounds[rIdx][mIdx];
-  if(m.winner){const prev=sellers.find(s=>s.id===m.winner.id);if(prev&&prev.wins>0)prev.wins--;const oldLoser=m.winner.id===m.a.id?m.b:m.a;const ols=sellers.find(s=>s.id===oldLoser.id);if(ols)ols.status='alive';m.winner=null;}
-  if(m.draw){m.draw=false;}
+  // AJUSTE: caso de empate anterior não desfazia os "wins" de ambos — corrigido.
+  // Cartão não é mais creditado aqui (ver adjMatchCard).
+  if(m.draw){
+    const oldA=sellers.find(s=>s.id===m.a.id),oldB=sellers.find(s=>s.id===m.b.id);
+    if(oldA&&oldA.wins>0)oldA.wins--;
+    if(oldB&&oldB.wins>0)oldB.wins--;
+    m.draw=false;
+  } else if(m.winner){
+    const prev=sellers.find(s=>s.id===m.winner.id);if(prev&&prev.wins>0)prev.wins--;const oldLoser=m.winner.id===m.a.id?m.b:m.a;const ols=sellers.find(s=>s.id===oldLoser.id);if(ols)ols.status='alive';m.winner=null;
+  }
   if(result==='draw'){
     m.draw=true;m.winner=null;
     const sA=sellers.find(s=>s.id===m.a.id),sB=sellers.find(s=>s.id===m.b.id);
-    if(sA){sA.wins++;sA.cartoes=(sA.cartoes||0)+(m.cartoesA||0);}
-    if(sB){sB.wins++;sB.cartoes=(sB.cartoes||0)+(m.cartoesB||0);}
+    if(sA)sA.wins++;
+    if(sB)sB.wins++;
   } else {
     const winner=result==='a'?m.a:m.b,loser=result==='a'?m.b:m.a;
     m.winner=winner;
     const ws=sellers.find(s=>s.id===winner.id),ls=sellers.find(s=>s.id===loser.id);
-    if(ws){ws.wins++;ws.cartoes=(ws.cartoes||0)+(result==='a'?(m.cartoesA||0):(m.cartoesB||0));}
+    if(ws)ws.wins++;
     if(ls)ls.status='eliminated';
   }
   matchCount++;
@@ -3025,10 +3042,23 @@ function _updateCardDisplay(side){
   }
 }
 function adjMatchCard(side,delta){
-  if(side==='a'){_matchCartoesA=Math.max(0,_matchCartoesA+delta);}
-  else {_matchCartoesB=Math.max(0,_matchCartoesB+delta);}
+  // AJUSTE: antes, o cartão só era somado ao total do vendedor quando o duelo
+  // era finalizado (declarado vencedor). Se o usuário adicionava cartão e não
+  // finalizava o duelo na hora, o card ficava só no contador do modal e o
+  // total do vendedor (mini-stat no elenco) não refletia — parecia "não salvar".
+  // Agora o cartão é creditado direto no vendedor no momento do clique.
+  const before=side==='a'?_matchCartoesA:_matchCartoesB;
+  const after=Math.max(0,before+delta);
+  const realDelta=after-before; // pode ser menor que delta se bateu no piso 0
+  if(side==='a'){_matchCartoesA=after;}else{_matchCartoesB=after;}
   _updateCardDisplay(side);
   _saveMatchCartoesToMatch(); // salva imediatamente no objeto da partida
+  if(realDelta!==0){
+    const m=_getCurrentMatch();
+    const player=m?(side==='a'?m.a:m.b):null;
+    const s=player?sellers.find(x=>x.id===player.id):null;
+    if(s){s.cartoes=Math.max(0,(s.cartoes||0)+realDelta);renderSellers();renderSidebar();}
+  }
   saveState();
 }
 
@@ -4235,6 +4265,7 @@ function applyState(data){
   return true;
 }
 let _saveErrorWarned=false;
+let _cloudSaveTimer=null;
 function saveState(){
   const state=getState();
   try{
@@ -4246,10 +4277,22 @@ function saveState(){
       alert('Não foi possível salvar as alterações: o armazenamento do navegador está cheio. Tente remover fotos muito grandes ou limpar dados antigos em "Apagar Tudo".');
     }
   }
-  if(window.__saveToCloud)window.__saveToCloud(state);
+  // AJUSTE: a gravação local (localStorage) continua instantânea a cada
+  // chamada — não há risco de perda aí. Já o envio pra nuvem é agrupado
+  // (debounce de 250ms): se o usuário clicar várias vezes seguidas (ex:
+  // cartão, placar), só a última leva do estado é mandada, reduzindo o
+  // número de escritas concorrentes no Firebase.
+  if(window.__saveToCloud){
+    clearTimeout(_cloudSaveTimer);
+    _cloudSaveTimer=setTimeout(()=>{window.__saveToCloud(getState());},250);
+  }
 }
 window.__loadStateFromCloud=function(data){
   if(!data||!data.sellers)return;
+  // AJUSTE: guarda a versão mais recente que sabemos que está na nuvem — é o
+  // baseline usado por _diffState() pra descobrir o que ESTE aparelho de fato
+  // alterou na próxima gravação, em vez de reenviar/sobrescrever tudo.
+  window.__lastSyncedState=data;
   // BUGFIX: JSON.parse aqui não tinha try/catch — se o localStorage tivesse algo
   // corrompido/parcial (ex: gravação interrompida por aba fechada no meio do save),
   // isso quebrava essa função inteira silenciosamente e o estado vindo da nuvem
@@ -4462,16 +4505,97 @@ function hideSplash(){const s=document.getElementById('loadingSplash');if(s)s.st
       catch(e) { console.error(e); hideSplash(); }
     });
 
+    // AJUSTE: a v1 deste conserto ("local vence por id/posição quando existe
+    // dos dois lados") ainda tinha furo — como sellers/allRounds/groups sempre
+    // trazem a lista INTEIRA, qualquer vendedor ou partida que este aparelho já
+    // tivesse carregado (ou seja, quase todos) acabava sendo escrito com a
+    // cópia local, mesmo sem ter sido mexido agora, apagando de novo o que
+    // outro aparelho tinha acabado de salvar.
+    // Fix real: guardamos window.__lastSyncedState (o último estado que temos
+    // certeza que veio da nuvem — via listener ou via nosso próprio commit) e,
+    // na hora de salvar, comparamos o estado atual com ESSE baseline pra saber
+    // exatamente quais vendedores/partidas ESTE aparelho de fato alterou.
+    // Só esse recorte (diff) é aplicado em cima do valor mais recente do
+    // servidor dentro da transaction — tudo que outro aparelho gravou em
+    // vendedores/partidas que este aqui não tocou fica intacto.
+    function _eq(a,b){ try{ return JSON.stringify(a)===JSON.stringify(b); }catch(e){ return false; } }
+    function _diffState(baseline, state) {
+      var diff = { sellers:[], allRounds:[], groupMeta:[], groupMatches:[], scalars:{} };
+      var baseSellers = {}; (baseline&&baseline.sellers||[]).forEach(function(s){ baseSellers[s.id]=s; });
+      (state.sellers||[]).forEach(function(s){
+        var b = baseSellers[s.id];
+        if (!b || !_eq(b,s)) diff.sellers.push(s);
+      });
+      var baseRounds = (baseline&&baseline.allRounds)||[];
+      (state.allRounds||[]).forEach(function(round,ri){
+        (round||[]).forEach(function(m,mi){
+          var b = baseRounds[ri]?baseRounds[ri][mi]:undefined;
+          if (!b || !_eq(b,m)) diff.allRounds.push({ri:ri,mi:mi,m:m});
+        });
+      });
+      var baseGroups = (baseline&&baseline.groups)||[];
+      (state.groups||[]).forEach(function(g,gi){
+        var bg = baseGroups[gi];
+        var meta = {}; Object.keys(g).forEach(function(k){ if(k!=='matches') meta[k]=g[k]; });
+        var bMeta = null;
+        if (bg) { bMeta = {}; Object.keys(bg).forEach(function(k){ if(k!=='matches') bMeta[k]=bg[k]; }); }
+        if (!bg || !_eq(bMeta,meta)) diff.groupMeta.push({gi:gi,meta:meta});
+        (g.matches||[]).forEach(function(m,mi){
+          var bm = (bg&&bg.matches)?bg.matches[mi]:undefined;
+          if (!bm || !_eq(bm,m)) diff.groupMatches.push({gi:gi,mi:mi,m:m});
+        });
+      });
+      ['currentRoundIdx','matchCount','groupsPhaseActive'].forEach(function(k){
+        if (!baseline || baseline[k]!==state[k]) diff.scalars[k]=state[k];
+      });
+      return diff;
+    }
+    function _applyDiff(current, diff) {
+      var result = current ? JSON.parse(JSON.stringify(current)) : {sellers:[],allRounds:[],groups:[],currentRoundIdx:0,matchCount:0,groupsPhaseActive:false};
+      result.sellers = result.sellers||[];
+      var byId={}; result.sellers.forEach(function(s,i){ byId[s.id]=i; });
+      diff.sellers.forEach(function(s){
+        if (byId[s.id]!==undefined) result.sellers[byId[s.id]]=s;
+        else { byId[s.id]=result.sellers.length; result.sellers.push(s); }
+      });
+      result.allRounds = result.allRounds||[];
+      diff.allRounds.forEach(function(d){
+        while(result.allRounds.length<=d.ri) result.allRounds.push([]);
+        while(result.allRounds[d.ri].length<=d.mi) result.allRounds[d.ri].push(null);
+        result.allRounds[d.ri][d.mi]=d.m;
+      });
+      result.groups = result.groups||[];
+      diff.groupMeta.forEach(function(d){
+        while(result.groups.length<=d.gi) result.groups.push({matches:[]});
+        result.groups[d.gi] = Object.assign({}, result.groups[d.gi], d.meta, {matches: result.groups[d.gi].matches||[]});
+      });
+      diff.groupMatches.forEach(function(d){
+        while(result.groups.length<=d.gi) result.groups.push({matches:[]});
+        if (!result.groups[d.gi].matches) result.groups[d.gi].matches=[];
+        while(result.groups[d.gi].matches.length<=d.mi) result.groups[d.gi].matches.push(null);
+        result.groups[d.gi].matches[d.mi]=d.m;
+      });
+      Object.keys(diff.scalars).forEach(function(k){ result[k]=diff.scalars[k]; });
+      result.ts = Date.now();
+      return result;
+    }
+
     window.__saveToCloud = function(state) {
       if (!window.__firebaseReady) return;
       window.__isSyncing = true;
-      dbRef.set(state)
-        .then(function() { setTimeout(function(){ window.__isSyncing = false; }, 500); })
-        .catch(function(e) {
-          console.error(e);
-          window.__isSyncing = false;
+      var diff = _diffState(window.__lastSyncedState, state);
+      dbRef.transaction(function(current) {
+        if (!current || !current.sellers) return state; // nada no servidor ainda, grava direto
+        return _applyDiff(current, diff);
+      }, function(error, committed, snapshot) {
+        setTimeout(function(){ window.__isSyncing = false; }, 500);
+        if (error) {
+          console.error(error);
           updateSyncStatus('error');
-        });
+          return;
+        }
+        if (committed && snapshot) window.__lastSyncedState = snapshot.val();
+      });
     };
 
     updateSyncStatus('connected');
