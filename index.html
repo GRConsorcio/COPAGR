@@ -1409,9 +1409,32 @@ body::before{
   background:var(--s1);border-left:1px solid var(--bd);border-right:1px solid var(--bd);
 }
 
+/* ── MODO ESPECTADOR (?readonly=1) ── */
+body.readonly-mode .no-spectator{display:none !important;}
+.spectator-banner{
+  position:fixed;top:0;left:0;right:0;z-index:9999;
+  background:rgba(96,165,250,.12);border-bottom:1px solid rgba(96,165,250,.3);
+  color:var(--blue);font-family:var(--font2);font-size:.7rem;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;text-align:center;padding:6px;
+}
+body.readonly-mode{padding-top:28px;}
 </style>
 </head>
 <body>
+<script>
+// Aplica o modo espectador o mais cedo possível, antes do resto da página
+// desenhar — evita um "flash" rápido mostrando os botões de edição antes de
+// sumirem.
+if(new URLSearchParams(location.search).get('readonly')==='1'){
+  document.body.classList.add('readonly-mode');
+  document.addEventListener('DOMContentLoaded',()=>{
+    const b=document.createElement('div');
+    b.className='spectator-banner';
+    b.textContent='👁 MODO ESPECTADOR — SOMENTE VISUALIZAÇÃO';
+    document.body.prepend(b);
+  });
+}
+</script>
 
 <!-- LOADING -->
 <div class="loading-splash" id="loadingSplash">
@@ -1467,14 +1490,14 @@ body::before{
   <!-- ══ GROUPS PANEL ══ -->
   <div class="panel active" id="panel-groups">
     <div class="ctrl-bar">
-      <button class="btn btn-primary" onclick="generateGroups()">Gerar Grupos</button>
-      <button class="btn btn-outline" onclick="advanceToKnockout()" id="btnAdvKnockout" style="display:none;">Avançar para Mata-Mata</button>
-      <button class="btn btn-outline" onclick="openOitavasSorteio()" id="btnSortOitavas" style="display:none;border-color:rgba(212,168,71,.4);color:var(--gold2);">&#9670; Sortear Oitavas</button>
+      <button class="btn btn-primary no-spectator" onclick="generateGroups()">Gerar Grupos</button>
+      <button class="btn btn-outline no-spectator" onclick="advanceToKnockout()" id="btnAdvKnockout" style="display:none;">Avançar para Mata-Mata</button>
+      <button class="btn btn-outline no-spectator" onclick="openOitavasSorteio()" id="btnSortOitavas" style="display:none;border-color:rgba(212,168,71,.4);color:var(--gold2);">&#9670; Sortear Oitavas</button>
       <button class="btn btn-ghost" onclick="toggleSidebar()">
         Elenco <span class="sidebar-count" id="sidebarCount2" style="position:relative;top:auto;right:auto;display:inline-flex;margin-left:4px;">0</span>
       </button>
-      <button class="btn btn-danger" onclick="resetCopa()">Reiniciar</button>
-      <button class="btn btn-danger" style="opacity:.5;font-size:.6rem;" onclick="resetAll()">Apagar Tudo</button>
+      <button class="btn btn-danger no-spectator" onclick="resetCopa()">Reiniciar</button>
+      <button class="btn btn-danger no-spectator" style="opacity:.5;font-size:.6rem;" onclick="resetAll()">Apagar Tudo</button>
     </div>
 
     <div id="groupsWrap" style="padding:1rem 1.5rem;">
@@ -1489,17 +1512,17 @@ body::before{
   <!-- ══ BRACKET PANEL ══ -->
   <div class="panel" id="panel-bracket">
     <div class="ctrl-bar">
-      <button class="btn btn-primary" onclick="generateBracket()">Gerar Mata-Mata</button>
-      <button class="btn btn-outline" onclick="abrirSorteioManual()">Sorteio Manual</button>
-      <button class="btn btn-blue" id="editModeBtn" onclick="toggleEditMode()">Editar</button>
-      <button class="btn btn-ghost" onclick="goBackRound()" id="btnBackRound" style="display:none;">‹ Fase Anterior</button>
-      <button class="btn btn-outline" onclick="advanceRound()">Próxima Fase ›</button>
+      <button class="btn btn-primary no-spectator" onclick="generateBracket()">Gerar Mata-Mata</button>
+      <button class="btn btn-outline no-spectator" onclick="abrirSorteioManual()">Sorteio Manual</button>
+      <button class="btn btn-blue no-spectator" id="editModeBtn" onclick="toggleEditMode()">Editar</button>
+      <button class="btn btn-ghost no-spectator" onclick="goBackRound()" id="btnBackRound" style="display:none;">‹ Fase Anterior</button>
+      <button class="btn btn-outline no-spectator" onclick="advanceRound()">Próxima Fase ›</button>
       <button class="btn btn-ghost" onclick="toggleSidebar()">
         Elenco <span class="sidebar-count" style="position:relative;top:auto;right:auto;display:inline-flex;margin-left:4px;" id="sidebarCount">0</span>
       </button>
-      <button class="btn btn-orange" onclick="openRepescagem()">Repescagem</button>
-      <button class="btn btn-danger" onclick="resetCopa()">Reiniciar</button>
-      <button class="btn btn-danger" style="opacity:.5;font-size:.6rem;" onclick="resetAll()">Apagar Tudo</button>
+      <button class="btn btn-orange no-spectator" onclick="openRepescagem()">Repescagem</button>
+      <button class="btn btn-danger no-spectator" onclick="resetCopa()">Reiniciar</button>
+      <button class="btn btn-danger no-spectator" style="opacity:.5;font-size:.6rem;" onclick="resetAll()">Apagar Tudo</button>
     </div>
     <div class="edit-banner" id="editBanner">
       <span>Modo Edição</span>
@@ -1564,13 +1587,13 @@ body::before{
 
   <!-- ══ SELLERS PANEL ══ -->
   <div class="panel" id="panel-sellers">
-    <div class="sellers-ctrl">
+    <div class="sellers-ctrl no-spectator">
       <button class="btn btn-primary" onclick="toggleAddForm()">+ Adicionar</button>
       <button class="btn btn-outline" onclick="openSorteio()" style="border-color:rgba(212,168,71,.4);color:var(--gold2);">&#9670; Sortear Países</button>
       <button class="btn btn-danger" onclick="resetCopa()">Reiniciar</button>
       <button class="btn btn-danger" style="opacity:.5;font-size:.6rem;" onclick="resetAll()">Apagar Tudo</button>
     </div>
-    <div class="add-form" id="addForm">
+    <div class="add-form no-spectator" id="addForm">
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Nome</label>
@@ -1631,11 +1654,11 @@ body::before{
             <div class="sb-flag" id="sbFlagA">🏳</div>
             <div class="sb-name" id="sbNameA">—</div>
             <div class="sb-country" id="sbCountryA">—</div>
-            <button onclick="editPlayerInMatch('a')" style="position:absolute;top:5px;right:5px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);color:var(--blue);border-radius:3px;padding:2px 5px;cursor:pointer;font-size:.55rem;font-family:var(--font2);transition:all .15s;z-index:2;" onmouseover="this.style.background='rgba(96,165,250,.15)'" onmouseout="this.style.background='rgba(96,165,250,.08)'">✎</button>
+            <button onclick="editPlayerInMatch('a')" class="no-spectator" style="position:absolute;top:5px;right:5px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);color:var(--blue);border-radius:3px;padding:2px 5px;cursor:pointer;font-size:.55rem;font-family:var(--font2);transition:all .15s;z-index:2;" onmouseover="this.style.background='rgba(96,165,250,.15)'" onmouseout="this.style.background='rgba(96,165,250,.08)'">✎</button>
           </div>
           <div class="sb-score-col">
             <div class="sb-score-box" id="scoreBoxA">0</div>
-            <div class="sb-score-btns">
+            <div class="sb-score-btns no-spectator">
               <button class="score-btn plus" onclick="adjustScore('a',1)">+</button>
               <button class="score-btn minus" onclick="adjustScore('a',-1)">−</button>
             </div>
@@ -1644,7 +1667,7 @@ body::before{
         <div class="sb-half" id="sbHalfB">
           <div class="sb-score-col">
             <div class="sb-score-box" id="scoreBoxB">0</div>
-            <div class="sb-score-btns">
+            <div class="sb-score-btns no-spectator">
               <button class="score-btn plus" onclick="adjustScore('b',1)">+</button>
               <button class="score-btn minus" onclick="adjustScore('b',-1)">−</button>
             </div>
@@ -1653,11 +1676,11 @@ body::before{
             <div class="sb-flag" id="sbFlagB">🏳</div>
             <div class="sb-name" id="sbNameB">—</div>
             <div class="sb-country" id="sbCountryB">—</div>
-            <button onclick="editPlayerInMatch('b')" style="position:absolute;top:5px;right:5px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);color:var(--blue);border-radius:3px;padding:2px 5px;cursor:pointer;font-size:.55rem;font-family:var(--font2);transition:all .15s;z-index:2;" onmouseover="this.style.background='rgba(96,165,250,.15)'" onmouseout="this.style.background='rgba(96,165,250,.08)'">✎</button>
+            <button onclick="editPlayerInMatch('b')" class="no-spectator" style="position:absolute;top:5px;right:5px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);color:var(--blue);border-radius:3px;padding:2px 5px;cursor:pointer;font-size:.55rem;font-family:var(--font2);transition:all .15s;z-index:2;" onmouseover="this.style.background='rgba(96,165,250,.15)'" onmouseout="this.style.background='rgba(96,165,250,.08)'">✎</button>
           </div>
         </div>
       </div>
-      <div class="action-grid" id="actionGrid">
+      <div class="action-grid no-spectator" id="actionGrid">
         <div class="action-btn action-win-a" id="btnWinA" onclick="finalizeMatch('a')">Vencedor: <span id="winLabelA">—</span></div>
         <div class="action-btn action-win-b" id="btnWinB" onclick="finalizeMatch('b')">Vencedor: <span id="winLabelB">—</span></div>
         <div class="action-btn action-draw" onclick="finalizeMatch('draw')">Empate — Ambos pontuam</div>
@@ -1668,24 +1691,24 @@ body::before{
         <div class="card-stat-col" id="cardColA">
           <div class="card-stat-title" id="extraNameA">—</div>
           <div class="card-counter-wrap">
-            <button class="card-counter-btn" onclick="adjMatchCard('a',-1)">−</button>
+            <button class="card-counter-btn no-spectator" onclick="adjMatchCard('a',-1)">−</button>
             <div class="card-counter-display" id="cardCountA">
               <span class="card-icon-anim" id="cardIconA">🟨</span>
               <span class="card-count" id="cardNumA">0</span>
             </div>
-            <button class="card-counter-btn" onclick="adjMatchCard('a',1)">+</button>
+            <button class="card-counter-btn no-spectator" onclick="adjMatchCard('a',1)">+</button>
           </div>
         </div>
         <div class="card-stat-divider">Cartões</div>
         <div class="card-stat-col" id="cardColB">
           <div class="card-stat-title" id="extraNameB">—</div>
           <div class="card-counter-wrap">
-            <button class="card-counter-btn" onclick="adjMatchCard('b',-1)">−</button>
+            <button class="card-counter-btn no-spectator" onclick="adjMatchCard('b',-1)">−</button>
             <div class="card-counter-display" id="cardCountB">
               <span class="card-icon-anim" id="cardIconB">🟨</span>
               <span class="card-count" id="cardNumB">0</span>
             </div>
-            <button class="card-counter-btn" onclick="adjMatchCard('b',1)">+</button>
+            <button class="card-counter-btn no-spectator" onclick="adjMatchCard('b',1)">+</button>
           </div>
         </div>
       </div>
@@ -1951,6 +1974,19 @@ let allRounds = [];
 let currentRoundIdx = 0;
 let currentMatchIdx = null;
 let matchCount = 0;
+// ── MODO ESPECTADOR ──
+// Ativa com ?readonly=1 na URL (é assim que o Portal vai carregar isto num
+// iframe). Esconde os controles de edição (CSS, classe .no-spectator) E
+// trava as funções de escrita por dentro também — não é só estética, se
+// alguém tentar chamar uma função pelo console do navegador, ela recusa.
+const READONLY = new URLSearchParams(location.search).get('readonly')==='1';
+function _ro(){
+  if(READONLY){
+    alert('Modo espectador — edição desativada nesta visualização.');
+    return true;
+  }
+  return false;
+}
 let editMode = false;
 let swapSource = null;
 
@@ -2029,6 +2065,7 @@ function handlePhotoUpload(input){
   });
 }
 function addSeller(){
+  if(_ro())return;
   const name=document.getElementById('inp-name').value.trim();
   const country=document.getElementById('inp-country').value.trim();
   const flag=document.getElementById('inp-flag').value||'🏳';
@@ -2153,6 +2190,7 @@ function buildGroups(players){
 }
 
 function generateGroups(){
+  if(_ro())return;
   const active=sellers.filter(s=>s.status==='alive');
   if(active.length<3){alert('Precisa de pelo menos 3 participantes para fase de grupos!');return;}
   groups=buildGroups(shuffle(active));
@@ -2204,6 +2242,7 @@ function computeGroupStandings(g){
 
 // ── edição direta de pontos na fase de grupos ──
 function adjGroupPts(gi, playerId, delta){
+  if(_ro())return;
   const g = groups[gi];
   if(!g) return;
   // encontra ou cria entrada manual de pontos no standings override
@@ -2263,6 +2302,7 @@ function renderAddToGroupList(gi){
 }
 
 function addSellerToGroup(gi, sellerId){
+  if(_ro())return;
   const g=groups[gi];
   if(!g) return;
   const seller=sellers.find(s=>s.id===sellerId);
@@ -2286,6 +2326,7 @@ function addSellerToGroup(gi, sellerId){
 }
 
 function removeSellerFromGroup(gi, sellerId){
+  if(_ro())return;
   const g=groups[gi];
   if(!g) return;
   const seller=g.players.find(p=>p.id===sellerId);
@@ -2354,13 +2395,13 @@ function renderGroups(){
           ${country?`<span class="g-country">${country}</span>`:''}
         </div></td>
         <td style="width:62px;padding-left:.25rem;padding-right:.25rem;">
-          <div style="display:flex;align-items:center;gap:3px;justify-content:flex-end;">
+          <div class="no-spectator" style="display:flex;align-items:center;gap:3px;justify-content:flex-end;">
             <button onclick="adjGroupPts(${gi},${p.id},-1)" style="width:18px;height:18px;border-radius:3px;border:1px solid rgba(248,113,113,.3);background:none;color:var(--red);cursor:pointer;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">−</button>
             <span class="pts-bold" style="min-width:18px;text-align:center;color:${s.p<0?'var(--red)':''}">${s.p}</span>
             <button onclick="adjGroupPts(${gi},${p.id},1)" style="width:18px;height:18px;border-radius:3px;border:1px solid rgba(52,211,153,.3);background:none;color:var(--green);cursor:pointer;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">+</button>
           </div>
         </td>
-        <td style="width:26px;padding-left:.2rem;padding-right:.4rem;">
+        <td class="no-spectator" style="width:26px;padding-left:.2rem;padding-right:.4rem;">
           <button onclick="removeSellerFromGroup(${gi},${p.id})" class="g-remove-btn" title="Remover do grupo">×</button>
         </td>
       </tr>`;
@@ -2597,6 +2638,7 @@ function openGroupMatch(gi, mi){
 // ══ advanceToKnockout ══
 // Coleta os classificados de cada grupo (top 1 ou top 2) e gera o bracket
 function advanceToKnockout(){
+  if(_ro())return;
   // collect qualifiers: top 1 de cada grupo (ou top 2 se grupo tiver >=4)
   const qualifiers=[];
   groups.forEach(g=>{
@@ -2669,6 +2711,7 @@ function buildRound(players,roundIdx){
 }
 
 function generateBracket(){
+  if(_ro())return;
   const active=sellers.filter(s=>s.status==='alive');
   if(active.length<2){alert('Precisa de pelo menos 2 participantes!');return;}
   allRounds=[];currentRoundIdx=0;matchCount=0;
@@ -2689,6 +2732,7 @@ let manualDrawPairs=[];
 let manualDrawAvailable=[];
 let manualDrawPending=null;
 function abrirSorteioManual(){
+  if(_ro())return;
   const active=sellers.filter(s=>s.status==='alive');
   if(active.length<2){alert('Precisa de pelo menos 2 participantes!');return;}
   manualDrawPairs=[];manualDrawAvailable=active.slice();manualDrawPending=null;
@@ -2727,6 +2771,7 @@ function manualDrawRemovePair(i){
 function closeManualDraw(){document.getElementById('manualDrawModal').classList.remove('open');manualDrawPending=null;}
 function closeManualDrawOverlay(e){if(e.target===document.getElementById('manualDrawModal'))closeManualDraw();}
 function confirmManualDraw(){
+  if(_ro())return;
   const finalPlayers=[];
   manualDrawPairs.forEach(p=>{finalPlayers.push(p.a,p.b);});
   finalPlayers.push(...shuffle(manualDrawAvailable));
@@ -2746,6 +2791,7 @@ function confirmManualDraw(){
 }
 
 async function goBackRound(){
+  if(_ro())return;
   if(!allRounds.length||currentRoundIdx===0)return;
   const ok=await showConfirm('Voltar Fase','Voltar para a fase anterior? Os resultados serão apagados.','Voltar','warning');
   if(!ok)return;
@@ -2769,6 +2815,7 @@ async function goBackRound(){
 }
 
 function advanceRound(){
+  if(_ro())return;
   if(!allRounds.length){alert('Gere o chaveamento primeiro!');return;}
   const curr=allRounds[currentRoundIdx];
   const pending=curr.filter(m=>!m.bye&&!m.winner&&!m.draw);
@@ -2988,6 +3035,7 @@ function _fillModalContent(){
 
 
 function adjustScore(side,delta){
+  if(_ro())return;
   let m;
   let isKnockout=false;
   if(currentGroupMatch!==null){
@@ -3045,6 +3093,7 @@ function updateModalStatus(){
 }
 
 function finalizeMatch(result){
+  if(_ro())return;
   // group match
   if(currentGroupMatch!==null){
     const {gi,mi}=currentGroupMatch;
@@ -3126,6 +3175,7 @@ function finalizeMatch(result){
 }
 
 function resetMatchScore(){
+  if(_ro())return;
   let m;
   if(currentGroupMatch!==null){const {gi,mi}=currentGroupMatch;m=groups[gi].matches[mi];}
   else if(currentMatchIdx!==null){const {rIdx,mIdx}=currentMatchIdx;m=allRounds[rIdx][mIdx];}
@@ -3182,6 +3232,7 @@ function _updateCardDisplay(side){
   }
 }
 function adjMatchCard(side,delta){
+  if(_ro())return;
   // AJUSTE: antes, o cartão só era somado ao total do vendedor quando o duelo
   // era finalizado (declarado vencedor). Se o usuário adicionava cartão e não
   // finalizava o duelo na hora, o card ficava só no contador do modal e o
@@ -3313,6 +3364,7 @@ function updateStats(){
 
 // ══ EDIT MODE ══
 function toggleEditMode(){
+  if(_ro())return;
   if(!allRounds.length){alert('Gere o chaveamento primeiro!');return;}
   editMode=!editMode;swapSource=null;updateEditModeUI();renderBracket();
 }
@@ -3493,13 +3545,14 @@ function renderSidebar(){
   function row(s){
     const av=s.photo?`<div class="sb-p-avatar"><img src="${s.photo}"></div>`:`<div class="sb-p-avatar">${s.flag}</div>`;
     const cls=s.status==='eliminated'?'eliminated':s.status==='champion'?'champion':'';
-    return `<div class="sb-player-item ${cls}">${av}<div class="sb-p-info"><div class="sb-p-name">${s.name}</div><div class="sb-p-country">${s.flag} ${s.country}</div></div><div class="sb-p-actions"><button class="sb-p-btn edit" onclick="openEditPlayerModal(${s.id})">✎</button><button class="sb-p-btn del" onclick="removeSellerAndRefresh(${s.id})">×</button></div></div>`;
+    return `<div class="sb-player-item ${cls}">${av}<div class="sb-p-info"><div class="sb-p-name">${s.name}</div><div class="sb-p-country">${s.flag} ${s.country}</div></div><div class="sb-p-actions no-spectator"><button class="sb-p-btn edit" onclick="openEditPlayerModal(${s.id})">✎</button><button class="sb-p-btn del" onclick="removeSellerAndRefresh(${s.id})">×</button></div></div>`;
   }
   document.getElementById('sbPlayerListAlive').innerHTML=alive.map(row).join('');
   document.getElementById('sbPlayerListElim').innerHTML=elim.map(row).join('');
   const et=document.getElementById('sbEliminatedTitle');if(et)et.style.display=elim.length?'block':'none';
 }
 function removeSellerAndRefresh(id){
+  if(_ro())return;
   allRounds.forEach(round=>round.forEach(m=>{
     if(m.a&&m.a.id===id){if(m.b){m.winner=Object.assign({},m.b);m.bye=false;}else{m.bye=true;}}
     if(m.b&&m.b.id===id){if(m.a){m.winner=Object.assign({},m.a);m.bye=false;}else{m.bye=true;}}
@@ -3536,6 +3589,7 @@ function handleSbPhoto(input){
   });
 }
 function addSellerFromSidebar(){
+  if(_ro())return;
   const name=document.getElementById('sb-inp-name').value.trim();
   const country=document.getElementById('sb-inp-country').value.trim();
   const flag=document.getElementById('sb-inp-flag').value||'🏳';
@@ -3668,6 +3722,7 @@ document.addEventListener('click',e=>{
 // ══ REPESCAGEM ══
 let repescSelected=[],repescMode='bye',repescPhotoData='',repescFlagPickerOpen=false;
 function openRepescagem(){
+  if(_ro())return;
   if(!allRounds.length){alert('Gere o chaveamento primeiro!');return;}
   repescSelected=[];repescPhotoData='';
   ['repesc-inp-name','repesc-inp-country'].forEach(id=>document.getElementById(id).value='');
@@ -3752,6 +3807,7 @@ function closeRepescOverlay(e){if(e.target===document.getElementById('repescModa
 
 // ══ RESET ══
 async function resetCopa(){
+  if(_ro())return;
   const ok=await showConfirm('Reiniciar Campeonato','Zera o torneio mas mantém o elenco.','Reiniciar','danger');
   if(!ok)return;
   sellers.forEach(s=>{s.status='alive';s.wins=0;s.cartoes=0;});
@@ -3763,6 +3819,7 @@ async function resetCopa(){
   renderGroups();renderBracket();renderSellers();updateStats();saveState();
 }
 async function resetAll(){
+  if(_ro())return;
   const ok=await showConfirm('Apagar Tudo','Apaga torneio e elenco. Irreversível.','Apagar Tudo','danger');
   if(!ok)return;
   sellers=defaultSellers.map((s,i)=>({...s,id:i,status:'alive',wins:0,calls:0,fichas:0}));
@@ -4126,6 +4183,7 @@ function oitQualifiersDefault(){
 }
 
 function openOitavasSorteio(){
+  if(_ro())return;
   const pool = sellers.filter(s=>s.status!=='eliminated');
   if(pool.length<2){ alert('Precisa de pelo menos 2 participantes!'); return; }
   oitSelectedIds = oitQualifiersDefault();
