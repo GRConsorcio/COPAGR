@@ -4656,6 +4656,19 @@ function hideSplash(){const s=document.getElementById('loadingSplash');if(s)s.st
 
   window.__firebaseReady = false;
   window.__isSyncing = false;
+  // BUGFIX/RACE CONDITION — "mudança some ao abrir em outro PC":
+  // ao abrir o app, ele carrega o localStorage LOCAL (que pode estar bem
+  // desatualizado nesse aparelho) e, 1.2s depois, tenta regravar o estado —
+  // isso dispara window.__saveToCloud(). Se a resposta real do Firebase
+  // (dbRef.on('value')) ainda não tiver chegado até esse momento,
+  // window.__lastSyncedState continua null. Com baseline null, _diffState()
+  // trata TODO o estado local como "alterado agora por este aparelho" e
+  // sobrescreve, na nuvem, qualquer vendedor/partida que outro PC tenha salvo
+  // recentemente — mesmo sem o usuário ter mexido em nada. Essa flag garante
+  // que nenhuma escrita seja calculada/enviada antes de sabermos de verdade
+  // o que está no servidor nesta sessão.
+  window.__hasCloudBaseline = false;
+  window.__pendingCloudSave = null;
 
   function updateSyncStatus(status) {
     var el = document.getElementById('syncStatus');
@@ -4682,12 +4695,24 @@ function hideSplash(){const s=document.getElementById('loadingSplash');if(s)s.st
     window.__firebaseReady = true;
 
     dbRef.on('value', function(snapshot) {
-      if (window.__isSyncing) return;
       var data = snapshot.val();
+      if (!window.__hasCloudBaseline) {
+        window.__hasCloudBaseline = true;
+        // Se alguma gravação tentou sair antes de sabermos o que estava no
+        // servidor, ela ficou em espera aqui — processa agora, já com
+        // baseline real pra calcular o diff certo (e não sobrescrever nada).
+        if (window.__pendingCloudSave) {
+          var pending = window.__pendingCloudSave;
+          window.__pendingCloudSave = null;
+          window.__saveToCloud(pending);
+        }
+      }
+      if (window.__isSyncing) return;
       if (!data) { hideSplash(); return; }
       try { window.__loadStateFromCloud(data); }
       catch(e) { console.error(e); hideSplash(); }
     });
+
 
     // AJUSTE: a v1 deste conserto ("local vence por id/posição quando existe
     // dos dois lados") ainda tinha furo — como sellers/allRounds/groups sempre
@@ -4766,6 +4791,13 @@ function hideSplash(){const s=document.getElementById('loadingSplash');if(s)s.st
 
     window.__saveToCloud = function(state) {
       if (!window.__firebaseReady) return;
+      if (!window.__hasCloudBaseline) {
+        // Ainda não recebemos a resposta real do Firebase nesta sessão —
+        // guarda a versão mais recente e espera. Ver comentário na declaração
+        // de window.__hasCloudBaseline logo acima.
+        window.__pendingCloudSave = state;
+        return;
+      }
       window.__isSyncing = true;
       var diff = _diffState(window.__lastSyncedState, state);
       dbRef.transaction(function(current) {
