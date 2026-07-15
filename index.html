@@ -1113,6 +1113,18 @@ body::before{
 }
 .slot-pick:hover{border-color:var(--blue);background:rgba(96,165,250,.06);color:var(--blue);}
 .slot-pick .sp-flag{font-size:.9rem;flex-shrink:0;}
+.slot-pick.picked{border-color:var(--gold);background:rgba(212,168,71,.1);color:var(--gold2);}
+.manual-pair-row{
+  display:flex;align-items:center;gap:.4rem;padding:.5rem .65rem;
+  background:var(--s3);border:1px solid rgba(212,168,71,.2);border-radius:var(--radius);
+  font-size:.76rem;flex-wrap:wrap;
+}
+.manual-pair-row .sp-flag{font-size:.9rem;}
+.mp-remove{
+  margin-left:auto;background:none;border:none;color:var(--red);cursor:pointer;
+  font-size:.9rem;line-height:1;padding:2px 6px;border-radius:4px;
+}
+.mp-remove:hover{background:rgba(248,113,113,.12);}
 
 /* ── CONFIRM MODAL ── */
 .confirm-overlay{
@@ -1478,6 +1490,7 @@ body::before{
   <div class="panel" id="panel-bracket">
     <div class="ctrl-bar">
       <button class="btn btn-primary" onclick="generateBracket()">Gerar Mata-Mata</button>
+      <button class="btn btn-outline" onclick="abrirSorteioManual()">Sorteio Manual</button>
       <button class="btn btn-blue" id="editModeBtn" onclick="toggleEditMode()">Editar</button>
       <button class="btn btn-ghost" onclick="goBackRound()" id="btnBackRound" style="display:none;">‹ Fase Anterior</button>
       <button class="btn btn-outline" onclick="advanceRound()">Próxima Fase ›</button>
@@ -1693,6 +1706,31 @@ body::before{
     </div>
     <div style="padding:.5rem .75rem .2rem;font-size:.62rem;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;">Selecionado: <span id="swapSelectedName" style="color:var(--blue);"></span></div>
     <div class="slot-picker-grid" id="swapPickerGrid"></div>
+  </div>
+</div>
+
+<!-- SORTEIO MANUAL MODAL -->
+<div class="modal-overlay" id="manualDrawModal" onclick="closeManualDrawOverlay(event)">
+  <div class="modal swap-modal" style="width:min(640px,96vw);">
+    <div class="modal-header" style="border-color:rgba(212,168,71,.25);">
+      <div>
+        <div class="modal-round">Mata-Mata</div>
+        <div class="modal-title" style="color:var(--gold2);">Sorteio Manual</div>
+      </div>
+      <button class="modal-close" onclick="closeManualDraw()">✕</button>
+    </div>
+    <div style="padding:.6rem .9rem 0;font-size:.68rem;letter-spacing:.03em;color:var(--muted2);line-height:1.5;">
+      Clique em dois nomes para formar um confronto. Quem sobrar sem par entra sorteado aleatoriamente ao confirmar.
+    </div>
+    <div id="manualDrawStatus" style="padding:.4rem .9rem;font-size:.65rem;letter-spacing:.05em;color:var(--gold2);text-transform:uppercase;"></div>
+    <div style="padding:0 .9rem;font-size:.62rem;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;margin-bottom:.2rem;">Confrontos definidos</div>
+    <div id="manualDrawPairs" style="padding:0 .75rem .5rem;display:flex;flex-direction:column;gap:.4rem;"></div>
+    <div style="padding:0 .9rem;font-size:.62rem;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;margin:.3rem 0 .2rem;">Disponíveis</div>
+    <div class="slot-picker-grid" id="manualDrawAvailable" style="max-height:38vh;overflow-y:auto;"></div>
+    <div style="display:flex;gap:.5rem;padding:.75rem;border-top:1px solid var(--bd);">
+      <button class="btn btn-ghost" style="flex:1;" onclick="closeManualDraw()">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="confirmManualDraw()">Confirmar e Sortear o Resto</button>
+    </div>
   </div>
 </div>
 
@@ -2585,16 +2623,49 @@ function advanceToKnockout(){
   });
 }
 
+// ══ SORTEIO "FRAUDADO" ══
+// Lista de pares que você quer forçar na PRÓXIMA rodada que for gerada — seja pelo
+// "Gerar Mata-Mata", "Avançar para Mata-Mata" (fase de grupos) ou "Próxima Fase".
+// Assim que o grupo de jogadores dessa rodada contiver esses nomes, eles são
+// pareados exatamente como pedido; o resto do grupo é sorteado aleatoriamente.
+// A lista se auto-limpa depois de usada uma vez (não fica forçando pra sempre).
+let forcedDrawPairs=[
+  ['Dayanne','Nicolas'],
+  ['Edineia','Paula'],
+  ['Julia Reis','Dilzane'],
+  ['Jessica','Camilly'],
+  ['Eduarda','Victor'],
+  ['Amanda','Matheus']
+];
+function _normName(n){return(n||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();}
+function _applyForcedDraw(pool){
+  if(!forcedDrawPairs.length)return null;
+  const used=new Set();const forced=[];const missing=[];
+  forcedDrawPairs.forEach(([n1,n2])=>{
+    const p1=pool.find(s=>!used.has(s.id)&&_normName(s.name)===_normName(n1));
+    const p2=pool.find(s=>!used.has(s.id)&&_normName(s.name)===_normName(n2));
+    if(p1&&p2){forced.push(p1,p2);used.add(p1.id);used.add(p2.id);}
+    else{if(!p1)missing.push(n1);if(!p2)missing.push(n2);}
+  });
+  if(!forced.length)return null; // nenhum dos nomes forçados está nesse grupo — não é essa a rodada, ignora
+  if(missing.length)alert('Sorteio fraudado: não achei estes nomes entre os participantes desta rodada (ficaram de fora do pareamento forçado):\n'+missing.join(', '));
+  const rest=shuffle(pool.filter(s=>!used.has(s.id)));
+  return[...forced,...rest];
+}
+
 // ══ BRACKET ══
 function buildRound(players,roundIdx){
+  const forcedResult=_applyForcedDraw(players);
+  const ordered=forcedResult||players;
   const matches=[];
-  for(let i=0;i<players.length;i+=2){
-    if(i+1<players.length)
-      matches.push({a:players[i],b:players[i+1],winner:null,draw:false,bye:false,roundIdx,scoreA:0,scoreB:0});
+  for(let i=0;i<ordered.length;i+=2){
+    if(i+1<ordered.length)
+      matches.push({a:ordered[i],b:ordered[i+1],winner:null,draw:false,bye:false,roundIdx,scoreA:0,scoreB:0});
     else
-      matches.push({a:players[i],b:null,winner:players[i],draw:false,bye:true,roundIdx,scoreA:0,scoreB:0});
+      matches.push({a:ordered[i],b:null,winner:ordered[i],draw:false,bye:true,roundIdx,scoreA:0,scoreB:0});
   }
   allRounds.push(matches);
+  if(forcedResult)forcedDrawPairs=[]; // usado — volta ao sorteio normal dali pra frente
 }
 
 function generateBracket(){
@@ -2605,6 +2676,73 @@ function generateBracket(){
   buildRound(shuffle(active),0);
   if(editMode){editMode=false;updateEditModeUI();}
   renderBracket();updateStats();saveState();
+  const firstRoundMatches=allRounds[0]||[];
+  const pCount0=firstRoundMatches.map(m=>m.bye?1:2).reduce((a,b)=>a+b,0)||active.length;
+  const roundName=getRoundName(pCount0);
+  showPhaseAnimation(roundName,active.length,()=>{
+    startDuelShowcase(firstRoundMatches,roundName,()=>{renderBracket();});
+  });
+}
+
+// ══ SORTEIO MANUAL (definir confrontos exatos antes de sortear o resto) ══
+let manualDrawPairs=[];
+let manualDrawAvailable=[];
+let manualDrawPending=null;
+function abrirSorteioManual(){
+  const active=sellers.filter(s=>s.status==='alive');
+  if(active.length<2){alert('Precisa de pelo menos 2 participantes!');return;}
+  manualDrawPairs=[];manualDrawAvailable=active.slice();manualDrawPending=null;
+  renderManualDraw();
+  document.getElementById('manualDrawModal').classList.add('open');
+}
+function renderManualDraw(){
+  const availEl=document.getElementById('manualDrawAvailable');
+  availEl.innerHTML=manualDrawAvailable.map(s=>`
+    <div class="slot-pick ${manualDrawPending&&manualDrawPending.id===s.id?'picked':''}" onclick="manualDrawPick(${s.id})">
+      <span class="sp-flag">${s.flag}</span>${s.name}
+    </div>`).join('')||'<div style="padding:.6rem;color:var(--muted2);font-size:.75rem;grid-column:1/-1;">Todos já foram pareados.</div>';
+  const pairsEl=document.getElementById('manualDrawPairs');
+  pairsEl.innerHTML=manualDrawPairs.map((p,i)=>`
+    <div class="manual-pair-row">
+      <span class="sp-flag">${p.a.flag}</span>${p.a.name} <span style="color:var(--muted2);">×</span> <span class="sp-flag">${p.b.flag}</span>${p.b.name}
+      <button class="mp-remove" onclick="manualDrawRemovePair(${i})" title="Desfazer confronto">×</button>
+    </div>`).join('')||'<div style="padding:.2rem .1rem;color:var(--muted2);font-size:.7rem;">Nenhum confronto definido ainda.</div>';
+  document.getElementById('manualDrawStatus').textContent=`${manualDrawPairs.length} confronto(s) definido(s) · ${manualDrawAvailable.length} sem par`;
+}
+function manualDrawPick(id){
+  const s=manualDrawAvailable.find(x=>x.id===id);if(!s)return;
+  if(!manualDrawPending){manualDrawPending=s;renderManualDraw();return;}
+  if(manualDrawPending.id===id){manualDrawPending=null;renderManualDraw();return;}
+  manualDrawPairs.push({a:manualDrawPending,b:s});
+  manualDrawAvailable=manualDrawAvailable.filter(x=>x.id!==manualDrawPending.id&&x.id!==s.id);
+  manualDrawPending=null;
+  renderManualDraw();
+}
+function manualDrawRemovePair(i){
+  const p=manualDrawPairs[i];if(!p)return;
+  manualDrawAvailable.push(p.a,p.b);
+  manualDrawPairs.splice(i,1);
+  renderManualDraw();
+}
+function closeManualDraw(){document.getElementById('manualDrawModal').classList.remove('open');manualDrawPending=null;}
+function closeManualDrawOverlay(e){if(e.target===document.getElementById('manualDrawModal'))closeManualDraw();}
+function confirmManualDraw(){
+  const finalPlayers=[];
+  manualDrawPairs.forEach(p=>{finalPlayers.push(p.a,p.b);});
+  finalPlayers.push(...shuffle(manualDrawAvailable));
+  if(finalPlayers.length<2){alert('Defina pelo menos um confronto ou tenha ao menos 2 participantes!');return;}
+  closeManualDraw();
+  allRounds=[];currentRoundIdx=0;matchCount=0;
+  sellers.forEach(s=>{if(s.status!=='eliminated'){s.wins=0;}});
+  buildRound(finalPlayers,0);
+  if(editMode){editMode=false;updateEditModeUI();}
+  renderBracket();updateStats();saveState();
+  const firstRoundMatches=allRounds[0]||[];
+  const pCount0=firstRoundMatches.map(m=>m.bye?1:2).reduce((a,b)=>a+b,0)||finalPlayers.length;
+  const roundName=getRoundName(pCount0);
+  showPhaseAnimation(roundName,finalPlayers.length,()=>{
+    startDuelShowcase(firstRoundMatches,roundName,()=>{renderBracket();});
+  });
 }
 
 async function goBackRound(){
