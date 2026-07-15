@@ -3228,7 +3228,7 @@ function handleSlotClick(rIdx,mIdx,side,event){
 }
 function showEam(title,event){
   const menu=document.getElementById('editActionMenu');
-  document.getElementById('eamPlayerName').textContent=title;
+  document.getElementById('eamPlayerName').innerHTML=title;
   const duelBtn=document.getElementById('eamDuelBtn');
   if(duelBtn)duelBtn.style.display=(eamTarget&&eamTarget.isBye)?'flex':'none';
   menu.style.display='block';
