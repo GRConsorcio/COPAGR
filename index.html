@@ -1096,6 +1096,7 @@ body::before{
 .edit-action-btn:hover{background:rgba(255,255,255,.05);}
 .eab-icon{font-size:.9rem;width:18px;text-align:center;flex-shrink:0;}
 .edit-action-btn.swap{color:var(--blue);}
+.edit-action-btn.duel{color:var(--green);}
 .edit-action-btn.edit-info{color:var(--gold);}
 .edit-action-btn.del{color:var(--red);}
 
@@ -1686,7 +1687,7 @@ body::before{
     <div class="modal-header" style="border-color:rgba(96,165,250,.2);">
       <div>
         <div class="modal-round">Modo Edição</div>
-        <div class="modal-title" style="color:var(--blue);">Trocar com quem?</div>
+        <div class="modal-title" id="swapModalTitle" style="color:var(--blue);">Trocar com quem?</div>
       </div>
       <button class="modal-close" onclick="closeSwapModal()">✕</button>
     </div>
@@ -1699,6 +1700,7 @@ body::before{
 <div id="editActionMenu" class="edit-action-menu" style="display:none;">
   <div class="edit-action-menu-header" id="eamPlayerName">Jogador</div>
   <button class="edit-action-btn swap" onclick="eamSwap()"><span class="eab-icon">⇄</span> Trocar posição</button>
+  <button class="edit-action-btn duel" id="eamDuelBtn" onclick="eamDuelBye()" style="display:none;"><span class="eab-icon">⚔</span> Duelar com outro BYE</button>
   <button class="edit-action-btn edit-info" onclick="eamEdit()"><span class="eab-icon">✎</span> Editar dados</button>
   <button class="edit-action-btn remove-bracket" onclick="eamRemoveFromBracket()"><span class="eab-icon">○</span> Retirar do chaveamento</button>
   <button class="edit-action-btn del" onclick="eamDelete()"><span class="eab-icon">×</span> Excluir participante</button>
@@ -3227,6 +3229,8 @@ function handleSlotClick(rIdx,mIdx,side,event){
 function showEam(title,event){
   const menu=document.getElementById('editActionMenu');
   document.getElementById('eamPlayerName').textContent=title;
+  const duelBtn=document.getElementById('eamDuelBtn');
+  if(duelBtn)duelBtn.style.display=(eamTarget&&eamTarget.isBye)?'flex':'none';
   menu.style.display='block';
   const e=event||window.event;
   const x=e?e.clientX:window.innerWidth/2,y=e?e.clientY:window.innerHeight/2;
@@ -3249,6 +3253,7 @@ function eamSwap(){
     if(m.a)allSlots.push({rIdx:rIdx,mIdx:mi,side:'a',player:m.a,bye:m.bye});
     if(m.b&&!m.bye)allSlots.push({rIdx:rIdx,mIdx:mi,side:'b',player:m.b,bye:false});
   });
+  document.getElementById('swapModalTitle').textContent='Trocar com quem?';
   document.getElementById('swapSelectedName').textContent=player.name;
   document.getElementById('swapPickerGrid').innerHTML=allSlots
     .filter(s=>!(s.mIdx===mIdx&&s.side===side))
@@ -3276,6 +3281,35 @@ function doSwap(src,dst){
 }
 function closeSwapModal(){document.getElementById('swapModal').classList.remove('open');swapSource=null;}
 function closeSwapOverlay(e){if(e.target===document.getElementById('swapModal'))closeSwapModal();}
+
+// ── duelar dois participantes que estão em BYE (transforma dois BYEs em um confronto real) ──
+function eamDuelBye(){
+  if(!eamTarget||!eamTarget.isBye)return;closeEam();
+  const {rIdx,mIdx,player}=eamTarget;
+  const round=allRounds[rIdx];
+  const byeSlots=[];
+  round.forEach((m,mi)=>{if(m.bye&&mi!==mIdx)byeSlots.push({mIdx:mi,player:m.a});});
+  if(!byeSlots.length){alert('Não há outro participante em BYE nesta rodada para duelar.');return;}
+  document.getElementById('swapModalTitle').textContent='Duelar com quem?';
+  document.getElementById('swapSelectedName').textContent=player.name;
+  const grid=document.getElementById('swapPickerGrid');
+  grid.innerHTML='';
+  byeSlots.forEach(s=>{
+    const div=document.createElement('div');div.className='slot-pick';
+    div.innerHTML=`<span class="sp-flag">${s.player.flag}</span>${s.player.name} (BYE)`;
+    div.onclick=()=>doDuelBye(rIdx,mIdx,s.mIdx);
+    grid.appendChild(div);
+  });
+  document.getElementById('swapModal').classList.add('open');
+}
+function doDuelBye(rIdx,srcMIdx,dstMIdx){
+  const round=allRounds[rIdx];
+  const mSrc=round[srcMIdx],mDst=round[dstMIdx];
+  if(!mSrc||!mDst)return;
+  mSrc.b=mDst.a;mSrc.bye=false;mSrc.winner=null;mSrc.draw=false;mSrc.scoreA=0;mSrc.scoreB=0;
+  round.splice(dstMIdx,1); // remove o outro BYE, que virou o adversário do confronto criado
+  closeSwapModal();renderBracket();saveState();
+}
 
 function eamEdit(){if(!eamTarget)return;closeEam();openEditPlayerModal(eamTarget.player.id);}
 function eamRemoveFromBracket(){
