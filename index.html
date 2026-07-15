@@ -2654,18 +2654,17 @@ function renderBracket(){
   const isEdit=editMode;
   let html='<div class="bracket-stage">';
   allRounds.forEach((round,rIdx)=>{
-    const isCurr=rIdx===currentRoundIdx;
     const pCount=round.map(m=>m.bye?1:2).reduce((a,b)=>a+b,0);
     html+=`<div class="bracket-col"><div class="col-header">${getRoundName(pCount)}</div><div class="col-body">`;
     round.forEach((m,mIdx)=>{
       if(m.bye){
-        html+=`<div class="match-wrap"><div class="bye-card ${isCurr&&isEdit?'edit-mode':''}" ${isCurr&&isEdit?`onclick="openByeEdit(${rIdx},${mIdx},event)"`:''}>
+        html+=`<div class="match-wrap"><div class="bye-card ${isEdit?'edit-mode':''}" ${isEdit?`onclick="openByeEdit(${rIdx},${mIdx},event)"`:''}>
           ${playerAvatar(m.a,18)}<span style="font-size:.72rem;font-weight:500;margin-left:4px;">${m.a.name}</span>
           <span style="margin-left:auto;font-size:.55rem;color:var(--green);letter-spacing:.06em;text-transform:uppercase;">BYE</span>
         </div></div>`;
       } else {
         const finished=m.winner||m.draw;
-        const isClickable=isCurr&&!isEdit;
+        const isClickable=!isEdit;
         let clsA='',clsB='',sA=m.scoreA||0,sB=m.scoreB||0,mCls='pending',badge='';
         if(finished&&m.draw){mCls='tied';clsA='draw-a';clsB='draw-b';badge=`<div class="match-status-badge badge-draw">Emp</div>`;}
         else if(finished&&m.winner){mCls='done';clsA=m.winner.id===m.a.id?'winner':'loser';clsB=m.winner.id===m.b.id?'winner':'loser';badge=`<div class="match-status-badge badge-done">✓</div>`;}
@@ -2964,7 +2963,8 @@ function finalizeMatch(result){
   matchCount++;
   updateModalStatus();_buildModalNavDots();
   const roundDone=allRounds[rIdx].every(x=>x.winner||x.bye||x.draw);
-  if(roundDone){
+  const nextRoundExists=allRounds.length>rIdx+1;
+  if(roundDone&&!nextRoundExists){
     const advancers=allRounds[rIdx].map(m=>{if(m.draw)return[m.a,m.b];if(m.winner)return[m.winner];return[];}).flat();
     if(advancers.length===1){
       const ch=sellers.find(s=>s.id===advancers[0].id);
@@ -3217,7 +3217,7 @@ function openByeEdit(rIdx,mIdx,event){
   showEam(`${m.a.flag} ${m.a.name} · BYE`,event);
 }
 function handleSlotClick(rIdx,mIdx,side,event){
-  if(!editMode||rIdx!==currentRoundIdx)return;
+  if(!editMode)return;
   const m=allRounds[rIdx][mIdx];
   const player=side==='a'?m.a:m.b;if(!player)return;
   if(event&&event.stopPropagation)event.stopPropagation();
@@ -3245,9 +3245,9 @@ function eamSwap(){
   swapSource={rIdx,mIdx,side,player};
   // open swap modal
   const allSlots=[];
-  allRounds[currentRoundIdx].forEach((m,mi)=>{
-    if(m.a)allSlots.push({rIdx:currentRoundIdx,mIdx:mi,side:'a',player:m.a,bye:m.bye});
-    if(m.b&&!m.bye)allSlots.push({rIdx:currentRoundIdx,mIdx:mi,side:'b',player:m.b,bye:false});
+  allRounds[rIdx].forEach((m,mi)=>{
+    if(m.a)allSlots.push({rIdx:rIdx,mIdx:mi,side:'a',player:m.a,bye:m.bye});
+    if(m.b&&!m.bye)allSlots.push({rIdx:rIdx,mIdx:mi,side:'b',player:m.b,bye:false});
   });
   document.getElementById('swapSelectedName').textContent=player.name;
   document.getElementById('swapPickerGrid').innerHTML=allSlots
