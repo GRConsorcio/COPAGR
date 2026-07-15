@@ -3280,11 +3280,23 @@ function closeSwapOverlay(e){if(e.target===document.getElementById('swapModal'))
 function eamEdit(){if(!eamTarget)return;closeEam();openEditPlayerModal(eamTarget.player.id);}
 function eamRemoveFromBracket(){
   if(!eamTarget)return;closeEam();
-  const {rIdx,mIdx,side}=eamTarget;
-  const m=allRounds[rIdx][mIdx];
-  if(side==='a'&&m.b&&!m.bye){m.a=m.b;m.b=null;m.bye=true;m.winner=m.a;}
-  else if(side==='a'){m.a=null;m.bye=false;}
-  else{m.b=null;m.bye=true;m.winner=m.a;}
+  const {rIdx,mIdx,side,isBye}=eamTarget;
+  const round=allRounds[rIdx];
+  const m=round&&round[mIdx];
+  if(!m)return;
+  if(isBye||m.bye){
+    // era uma vaga de BYE (jogador sozinho, sem adversário) — não sobra ninguém
+    // no confronto, então removemos o confronto inteiro da rodada.
+    round.splice(mIdx,1);
+  } else if(side==='a'&&m.b){
+    // sobra o jogador B — promove ele para a vaga A e marca como BYE
+    m.a=m.b;m.b=null;m.bye=true;m.winner=m.a;m.draw=false;m.scoreA=0;m.scoreB=0;
+  } else if(side==='b'){
+    m.b=null;m.bye=true;m.winner=m.a;m.draw=false;m.scoreA=0;m.scoreB=0;
+  } else {
+    // caso residual sem adversário válido — remove o confronto
+    round.splice(mIdx,1);
+  }
   renderBracket();saveState();
 }
 function eamDelete(){
