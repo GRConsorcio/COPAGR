@@ -1996,15 +1996,16 @@ let groupsPhaseActive = false;
 
 // ══ UTILS ══
 function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
-// Nomes de fase: Oitavas → Quartas → Semifinal → Final. Não usamos mais
-// "Décimo Sexto"/"1ª Fase" — com chaves grandes (ex: 32 vagas pra caber 29
-// participantes com byes), a primeira fase eliminatória agora é sempre
-// chamada de Oitavas de Final, mesmo que tecnicamente a chave comporte mais
-// gente que uma oitava "de verdade". É assim que o torneio é anunciado pro
-// público, então é assim que o rótulo deve aparecer.
-function getRoundName(n){
-  if(n<=2)return'Final';if(n<=4)return'Semifinal';
-  if(n<=8)return'Quartas de Final';return'Oitavas de Final';
+// Nome de fase por POSIÇÃO da rodada, não por quantidade de jogadores — a
+// contagem de jogadores varia (byes, tamanho de chave) e podia fazer duas
+// rodadas diferentes caírem no mesmo nome (ex: "Oitavas" duas vezes seguidas).
+// Sequência fixa: 1ª rodada eliminatória = Oitavas, 2ª = Quartas,
+// 3ª = Semifinal, 4ª em diante = Final.
+function getRoundName(roundIdx){
+  if(roundIdx===0)return'Oitavas de Final';
+  if(roundIdx===1)return'Quartas de Final';
+  if(roundIdx===2)return'Semifinal';
+  return'Final';
 }
 function playerAvatar(s,size=20){
   if(s.photo) return `<div class="mp-photo" style="width:${size}px;height:${size}px;"><img src="${s.photo}"></div>`;
@@ -2664,8 +2665,7 @@ function advanceToKnockout(){
   renderBracket();updateStats();saveState();
   showPhaseAnimation('Mata-Mata',qualifiers.length,()=>{
     const firstRoundMatches=allRounds[0]||[];
-    const pCount0=firstRoundMatches.map(m=>m.bye?1:2).reduce((a,b)=>a+b,0)||qualifiers.length;
-    const roundName=getRoundName(pCount0);
+    const roundName=getRoundName(0);
     startDuelShowcase(firstRoundMatches,roundName,()=>{renderBracket();});
   });
 }
@@ -2693,8 +2693,7 @@ function generateBracket(){
   if(editMode){editMode=false;updateEditModeUI();}
   renderBracket();updateStats();saveState();
   const firstRoundMatches=allRounds[0]||[];
-  const pCount0=firstRoundMatches.map(m=>m.bye?1:2).reduce((a,b)=>a+b,0)||active.length;
-  const roundName=getRoundName(pCount0);
+  const roundName=getRoundName(0);
   showPhaseAnimation(roundName,active.length,()=>{
     startDuelShowcase(firstRoundMatches,roundName,()=>{renderBracket();});
   });
@@ -2756,8 +2755,7 @@ function confirmManualDraw(){
   if(editMode){editMode=false;updateEditModeUI();}
   renderBracket();updateStats();saveState();
   const firstRoundMatches=allRounds[0]||[];
-  const pCount0=firstRoundMatches.map(m=>m.bye?1:2).reduce((a,b)=>a+b,0)||finalPlayers.length;
-  const roundName=getRoundName(pCount0);
+  const roundName=getRoundName(0);
   showPhaseAnimation(roundName,finalPlayers.length,()=>{
     startDuelShowcase(firstRoundMatches,roundName,()=>{renderBracket();});
   });
@@ -2796,7 +2794,7 @@ function advanceRound(){
   const winners=curr.map(m=>{if(m.draw)return[m.a,m.b];if(m.winner)return[m.winner];return[];}).flat();
   if(winners.length<=1)return;
   const nextIdx=currentRoundIdx+1;
-  const name=getRoundName(winners.length);
+  const name=getRoundName(nextIdx);
   showPhaseAnimation(name,winners.length,()=>{
     if(nextIdx>=allRounds.length){buildRound(winners,nextIdx);}
     currentRoundIdx=nextIdx;renderBracket();updateStats();saveState();
@@ -2815,7 +2813,7 @@ function renderBracket(){
   let html='<div class="bracket-stage">';
   allRounds.forEach((round,rIdx)=>{
     const pCount=round.map(m=>m.bye?1:2).reduce((a,b)=>a+b,0);
-    html+=`<div class="bracket-col"><div class="col-header">${getRoundName(pCount)}</div><div class="col-body">`;
+    html+=`<div class="bracket-col"><div class="col-header">${getRoundName(rIdx)}</div><div class="col-body">`;
     round.forEach((m,mIdx)=>{
       if(m.bye){
         html+=`<div class="match-wrap"><div class="bye-card ${isEdit?'edit-mode':''}" ${isEdit?`onclick="openByeEdit(${rIdx},${mIdx},event)"`:''}>
@@ -2860,7 +2858,7 @@ function updateProgressStrip(){
   if(groups.length) steps.push({label:'Grupos',done:groups.every(g=>g.matches.every(m=>m.winner||m.draw)),current:!allRounds.length});
   allRounds.forEach((r,i)=>{
     const pCount=r.map(m=>m.bye?1:2).reduce((a,b)=>a+b,0);
-    steps.push({label:getRoundName(pCount),done:i<currentRoundIdx,current:i===currentRoundIdx});
+    steps.push({label:getRoundName(i),done:i<currentRoundIdx,current:i===currentRoundIdx});
   });
   strip.innerHTML=steps.map((s,i)=>`
     <div class="prog-step ${s.done?'reached':''} ${s.current?'current':''}">
@@ -2967,7 +2965,7 @@ function _fillModalContent(){
     const pCount=allRounds[rIdx].map(x=>x.bye?1:2).reduce((a,b)=>a+b,0);
     const realMatches=allRounds[rIdx].filter(x=>!x.bye);
     const duelNum=realMatches.indexOf(m)+1;
-    document.getElementById('matchRoundLabel').textContent=`${getRoundName(pCount)} · Duelo ${duelNum}`;
+    document.getElementById('matchRoundLabel').textContent=`${getRoundName(rIdx)} · Duelo ${duelNum}`;
   } else if(currentGroupMatch!==null){
     const {gi,mi}=currentGroupMatch;
     const g=groups[gi];m=g.matches[mi];
@@ -3134,7 +3132,7 @@ function finalizeMatch(result){
     } else {
       renderSellers();renderBracket();updateStats();saveState();
       setTimeout(()=>{
-        const nextName=getRoundName(advancers.length);
+        const nextName=getRoundName(rIdx+1);
         showPhaseAnimation(nextName,advancers.length,()=>{
           buildRound(advancers,rIdx+1);currentRoundIdx=rIdx+1;renderBracket();updateStats();saveState();
           const nextRound=allRounds[rIdx+1]||[];
@@ -3326,8 +3324,7 @@ function updateStats(){
   const sc1=document.getElementById('sidebarCount'),sc2=document.getElementById('sidebarCount2');
   if(sc1)sc1.textContent=sellers.length;if(sc2)sc2.textContent=sellers.length;
   if(allRounds.length){
-    const pCount=(allRounds[currentRoundIdx]||[]).map(m=>m.bye?1:2).reduce((a,b)=>a+b,0);
-    document.getElementById('stat-round').textContent=getRoundName(pCount);
+    document.getElementById('stat-round').textContent=getRoundName(currentRoundIdx);
   } else if(groups.length){
     document.getElementById('stat-round').textContent='Grupos';
   } else {
