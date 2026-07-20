@@ -3789,7 +3789,7 @@ async function resetCopa(){
   updateEditModeUI();document.getElementById('champBanner').classList.remove('show');
   document.getElementById('btnAdvKnockout').style.display='none';
   document.getElementById('btnSortOitavas').style.display='none';
-  renderGroups();renderBracket();renderSellers();updateStats();saveState();
+  renderGroups();renderBracket();renderSellers();updateStats();saveStateForce();
 }
 async function resetAll(){
   if(_ro())return;
@@ -3801,7 +3801,7 @@ async function resetAll(){
   updateEditModeUI();document.getElementById('champBanner').classList.remove('show');
   document.getElementById('btnAdvKnockout').style.display='none';
   document.getElementById('btnSortOitavas').style.display='none';
-  renderGroups();renderBracket();renderSellers();updateStats();saveState();
+  renderGroups();renderBracket();renderSellers();updateStats();saveStateForce();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -4502,6 +4502,15 @@ function saveState(){
     _cloudSaveTimer=setTimeout(()=>{window.__saveToCloud(getState());},250);
   }
 }
+// Só pra Apagar Tudo / Reiniciar Campeonato — grava local igual saveState(),
+// mas na nuvem sobrescreve direto (sem diff), porque aqui a intenção real é
+// "zera tudo mesmo", não "mescla com o que os outros salvaram".
+function saveStateForce(){
+  const state=getState();
+  try{ localStorage.setItem('copa_gr_v2_state',JSON.stringify(state)); }catch(e){}
+  clearTimeout(_cloudSaveTimer);
+  if(window.__saveToCloudForce) window.__saveToCloudForce(state);
+}
 window.__loadStateFromCloud=function(data){
   if(!data||!data.sellers)return;
   // AJUSTE: guarda a versão mais recente que sabemos que está na nuvem — é o
@@ -4765,16 +4774,37 @@ function hideSplash(){const s=document.getElementById('loadingSplash');if(s)s.st
     // Só esse recorte (diff) é aplicado em cima do valor mais recente do
     // servidor dentro da transaction — tudo que outro aparelho gravou em
     // vendedores/partidas que este aqui não tocou fica intacto.
+    // BUG SÉRIO ENCONTRADO (é o motivo de "Apagar Tudo" e remover vendedor não
+    // vingarem de verdade): o diff acima só sabia dizer "isso mudou/foi
+    // adicionado". Ele nunca soube dizer "isso foi REMOVIDO" — porque o loop
+    // percorre state.sellers/allRounds/groups (o estado NOVO, já sem o item
+    // apagado), então o item que sumiu nunca entra no diff, e _applyDiff nunca
+    // tinha instrução pra tirá-lo da nuvem. Resultado: você apagava um
+    // vendedor ou dava "Apagar Tudo", a tela local ficava limpa, mas a nuvem
+    // continuava com os dados antigos inteiros — e na próxima atualização do
+    // listener (ou no F5 de qualquer aparelho), esses dados "nunca apagados"
+    // voltavam a aparecer, parecendo que nada tinha sido salvo.
+    // Fix: agora o diff também manda o TAMANHO real de cada lista (sellers
+    // removidos por id, e o comprimento de allRounds/groups e das partidas
+    // dentro deles) — e _applyDiff usa isso pra truncar/remover de verdade.
     function _eq(a,b){ try{ return JSON.stringify(a)===JSON.stringify(b); }catch(e){ return false; } }
     function _diffState(baseline, state) {
-      var diff = { sellers:[], allRounds:[], groupMeta:[], groupMatches:[], scalars:{} };
+      var diff = { sellers:[], sellersRemoved:[], allRounds:[], roundsLen:(state.allRounds||[]).length,
+                    roundMatchLens:[], groupMeta:[], groupMatches:[], groupsLen:(state.groups||[]).length,
+                    groupMatchLens:[], scalars:{} };
       var baseSellers = {}; (baseline&&baseline.sellers||[]).forEach(function(s){ baseSellers[s.id]=s; });
+      var stateSellerIds = {};
       (state.sellers||[]).forEach(function(s){
+        stateSellerIds[s.id]=true;
         var b = baseSellers[s.id];
         if (!b || !_eq(b,s)) diff.sellers.push(s);
       });
+      Object.keys(baseSellers).forEach(function(id){
+        if (!stateSellerIds[id]) diff.sellersRemoved.push(baseSellers[id].id);
+      });
       var baseRounds = (baseline&&baseline.allRounds)||[];
       (state.allRounds||[]).forEach(function(round,ri){
+        diff.roundMatchLens[ri]=(round||[]).length;
         (round||[]).forEach(function(m,mi){
           var b = baseRounds[ri]?baseRounds[ri][mi]:undefined;
           if (!b || !_eq(b,m)) diff.allRounds.push({ri:ri,mi:mi,m:m});
@@ -4787,6 +4817,7 @@ function hideSplash(){const s=document.getElementById('loadingSplash');if(s)s.st
         var bMeta = null;
         if (bg) { bMeta = {}; Object.keys(bg).forEach(function(k){ if(k!=='matches') bMeta[k]=bg[k]; }); }
         if (!bg || !_eq(bMeta,meta)) diff.groupMeta.push({gi:gi,meta:meta});
+        diff.groupMatchLens[gi]=(g.matches||[]).length;
         (g.matches||[]).forEach(function(m,mi){
           var bm = (bg&&bg.matches)?bg.matches[mi]:undefined;
           if (!bm || !_eq(bm,m)) diff.groupMatches.push({gi:gi,mi:mi,m:m});
@@ -4805,11 +4836,20 @@ function hideSplash(){const s=document.getElementById('loadingSplash');if(s)s.st
         if (byId[s.id]!==undefined) result.sellers[byId[s.id]]=s;
         else { byId[s.id]=result.sellers.length; result.sellers.push(s); }
       });
+      if (diff.sellersRemoved&&diff.sellersRemoved.length) {
+        var removedSet={}; diff.sellersRemoved.forEach(function(id){ removedSet[id]=true; });
+        result.sellers = result.sellers.filter(function(s){ return !removedSet[s.id]; });
+      }
       result.allRounds = result.allRounds||[];
       diff.allRounds.forEach(function(d){
         while(result.allRounds.length<=d.ri) result.allRounds.push([]);
         while(result.allRounds[d.ri].length<=d.mi) result.allRounds[d.ri].push(null);
         result.allRounds[d.ri][d.mi]=d.m;
+      });
+      // Trunca rodadas/duelos que sumiram no estado novo (ex: reset, undo de fase).
+      if (typeof diff.roundsLen==='number') result.allRounds.length = Math.min(result.allRounds.length, diff.roundsLen)||0;
+      if (diff.roundMatchLens) diff.roundMatchLens.forEach(function(len,ri){
+        if (result.allRounds[ri]&&typeof len==='number') result.allRounds[ri].length=len;
       });
       result.groups = result.groups||[];
       diff.groupMeta.forEach(function(d){
@@ -4821,6 +4861,11 @@ function hideSplash(){const s=document.getElementById('loadingSplash');if(s)s.st
         if (!result.groups[d.gi].matches) result.groups[d.gi].matches=[];
         while(result.groups[d.gi].matches.length<=d.mi) result.groups[d.gi].matches.push(null);
         result.groups[d.gi].matches[d.mi]=d.m;
+      });
+      // Trunca grupos/partidas de grupo que sumiram no estado novo.
+      if (typeof diff.groupsLen==='number') result.groups.length = Math.min(result.groups.length, diff.groupsLen)||0;
+      if (diff.groupMatchLens) diff.groupMatchLens.forEach(function(len,gi){
+        if (result.groups[gi]&&result.groups[gi].matches&&typeof len==='number') result.groups[gi].matches.length=len;
       });
       Object.keys(diff.scalars).forEach(function(k){ result[k]=diff.scalars[k]; });
       result.ts = Date.now();
@@ -4849,6 +4894,22 @@ function hideSplash(){const s=document.getElementById('loadingSplash');if(s)s.st
           return;
         }
         if (committed && snapshot) window.__lastSyncedState = snapshot.val();
+      });
+    };
+
+    // Sobrescrita DIRETA (sem diff/merge) — só pra ações destrutivas explícitas
+    // que já passaram por confirmação do usuário (Apagar Tudo / Reiniciar
+    // Campeonato). Ali a intenção é mesmo "zera tudo, sem exceção", então
+    // faz mais sentido gravar direto do que tentar expressar isso como um
+    // diff incremental — evita depender inteiramente da lógica de truncamento
+    // do _applyDiff pra esse caso, que é o que mais importa não falhar.
+    window.__saveToCloudForce = function(state) {
+      if (!window.__firebaseReady) { return; }
+      window.__isSyncing = true;
+      dbRef.set(state, function(error) {
+        setTimeout(function(){ window.__isSyncing = false; }, 500);
+        if (error) { console.error(error); updateSyncStatus('error'); return; }
+        window.__lastSyncedState = state;
       });
     };
 
