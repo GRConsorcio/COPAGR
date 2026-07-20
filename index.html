@@ -1996,10 +1996,15 @@ let groupsPhaseActive = false;
 
 // ══ UTILS ══
 function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
+// Nomes de fase: Oitavas → Quartas → Semifinal → Final. Não usamos mais
+// "Décimo Sexto"/"1ª Fase" — com chaves grandes (ex: 32 vagas pra caber 29
+// participantes com byes), a primeira fase eliminatória agora é sempre
+// chamada de Oitavas de Final, mesmo que tecnicamente a chave comporte mais
+// gente que uma oitava "de verdade". É assim que o torneio é anunciado pro
+// público, então é assim que o rótulo deve aparecer.
 function getRoundName(n){
   if(n<=2)return'Final';if(n<=4)return'Semifinal';
-  if(n<=8)return'Quartas de Final';if(n<=16)return'Oitavas de Final';
-  if(n<=32)return'Décimo Sexto';return'1ª Fase';
+  if(n<=8)return'Quartas de Final';return'Oitavas de Final';
 }
 function playerAvatar(s,size=20){
   if(s.photo) return `<div class="mp-photo" style="width:${size}px;height:${size}px;"><img src="${s.photo}"></div>`;
@@ -4539,9 +4544,16 @@ function hideSplash(){const s=document.getElementById('loadingSplash');if(s)s.st
         renderEverything();
         setTimeout(hideSplash,2500);
         // Regrava já no formato sem foto duplicada — resolve o "armazenamento
-        // cheio" de quem carregou um estado salvo antes dessa correção,
-        // sem precisar esperar a próxima ação do usuário.
-        setTimeout(()=>{ try{ saveState(); }catch(e){} },1200);
+        // cheio" de quem carregou um estado salvo antes dessa correção.
+        // IMPORTANTE: isso reescreve SÓ o localStorage, nunca chama saveState()
+        // (que empurra pra nuvem). Antes chamava saveState() aqui, e isso é
+        // exatamente o que causava vendedor/duelo apagado "voltar" depois de um
+        // F5: se o cache local deste aparelho estava desatualizado (ex: ainda
+        // tinha os duplicados que você acabou de limpar em outro aparelho), esse
+        // resave automático enviava esse cache velho pra nuvem 1.2s depois de
+        // carregar, sobrescrevendo a limpeza real. Reescrever só localmente
+        // resolve o storage cheio sem correr esse risco.
+        setTimeout(()=>{ try{ localStorage.setItem('copa_gr_v2_state',JSON.stringify(getState())); }catch(e){} },1200);
         return;
       }
     }catch(e){}
