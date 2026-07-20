@@ -2665,40 +2665,9 @@ function advanceToKnockout(){
   });
 }
 
-// ══ SORTEIO "FRAUDADO" ══
-// Lista de pares que você quer forçar na PRÓXIMA rodada que for gerada — seja pelo
-// "Gerar Mata-Mata", "Avançar para Mata-Mata" (fase de grupos) ou "Próxima Fase".
-// Assim que o grupo de jogadores dessa rodada contiver esses nomes, eles são
-// pareados exatamente como pedido; o resto do grupo é sorteado aleatoriamente.
-// A lista se auto-limpa depois de usada uma vez (não fica forçando pra sempre).
-let forcedDrawPairs=[
-  ['Dayanne','Nicolas'],
-  ['Edineia','Paula'],
-  ['Julia Reis','Dilzane'],
-  ['Jessica','Camilly'],
-  ['Eduarda','Victor'],
-  ['Amanda','Matheus']
-];
-function _normName(n){return(n||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();}
-function _applyForcedDraw(pool){
-  if(!forcedDrawPairs.length)return null;
-  const used=new Set();const forced=[];const missing=[];
-  forcedDrawPairs.forEach(([n1,n2])=>{
-    const p1=pool.find(s=>!used.has(s.id)&&_normName(s.name)===_normName(n1));
-    const p2=pool.find(s=>!used.has(s.id)&&_normName(s.name)===_normName(n2));
-    if(p1&&p2){forced.push(p1,p2);used.add(p1.id);used.add(p2.id);}
-    else{if(!p1)missing.push(n1);if(!p2)missing.push(n2);}
-  });
-  if(!forced.length)return null; // nenhum dos nomes forçados está nesse grupo — não é essa a rodada, ignora
-  if(missing.length)alert('Sorteio fraudado: não achei estes nomes entre os participantes desta rodada (ficaram de fora do pareamento forçado):\n'+missing.join(', '));
-  const rest=shuffle(pool.filter(s=>!used.has(s.id)));
-  return[...forced,...rest];
-}
-
 // ══ BRACKET ══
 function buildRound(players,roundIdx){
-  const forcedResult=_applyForcedDraw(players);
-  const ordered=forcedResult||players;
+  const ordered=players;
   const matches=[];
   for(let i=0;i<ordered.length;i+=2){
     if(i+1<ordered.length)
@@ -2707,7 +2676,6 @@ function buildRound(players,roundIdx){
       matches.push({a:ordered[i],b:null,winner:ordered[i],draw:false,bye:true,roundIdx,scoreA:0,scoreB:0});
   }
   allRounds.push(matches);
-  if(forcedResult)forcedDrawPairs=[]; // usado — volta ao sorteio normal dali pra frente
 }
 
 function generateBracket(){
