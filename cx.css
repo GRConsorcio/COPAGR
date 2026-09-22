@@ -9,8 +9,8 @@
   --cx-s3:color-mix(in srgb,var(--cx-surf) 86%,var(--cx-text));
   --cx-bd:color-mix(in srgb,var(--cx-text) 11%,transparent);
   --cx-bd2:color-mix(in srgb,var(--cx-accent) 34%,transparent);
-  --cx-mut:color-mix(in srgb,var(--cx-text) 44%,transparent);
-  --cx-mut2:color-mix(in srgb,var(--cx-text) 66%,transparent);
+  --cx-mut:color-mix(in srgb,var(--cx-text) 62%,transparent);
+  --cx-mut2:color-mix(in srgb,var(--cx-text) 82%,transparent);
   --cx-dim:color-mix(in srgb,var(--cx-accent) 13%,transparent);
   --cx-glowc:color-mix(in srgb,var(--cx-accent) calc(var(--cx-glow)*40%),transparent);
   --cx-ok:#34d399;--cx-bad:#f87171;--cx-warn:#fbbf24;
