@@ -29,6 +29,8 @@
 .cx-root[data-bg="aurora"] .cx-bgfx::before{background:var(--cx-accent);top:-25%;left:-10%}
 .cx-root[data-bg="aurora"] .cx-bgfx::after{background:var(--cx-accent2);bottom:-30%;right:-12%;animation-delay:-9s;animation-direction:alternate-reverse}
 @keyframes cxAurora{from{transform:translate(0,0) scale(1)}to{transform:translate(8%,10%) scale(1.15)}}
+/* varal de bandeirinhas (decoração, imagem gerada em JS a partir das cores dos times, ver fundoBandeirasUrl em 02-theme.js) */
+.cx-root[data-bg="bandeiras"] .cx-bgfx{opacity:.8;-webkit-mask-image:linear-gradient(180deg,#000 0,#000 70px,transparent 130px);mask-image:linear-gradient(180deg,#000 0,#000 70px,transparent 130px)}
 /* fx desligado: sem movimento nenhum (também vale para quem pediu "reduzir movimento" no sistema) */
 .cx-root[data-fx="0"] *,.cx-root[data-fx="0"] *::before,.cx-root[data-fx="0"] *::after,.cx-layer[data-fx="0"] *,.cx-layer[data-fx="0"] *::before,.cx-layer[data-fx="0"] *::after{animation:none!important;transition:none!important}
 @media (prefers-reduced-motion:reduce){.cx-root *,.cx-root *::before,.cx-root *::after,.cx-layer *,.cx-layer *::before,.cx-layer *::after{animation:none!important;transition:none!important}}
