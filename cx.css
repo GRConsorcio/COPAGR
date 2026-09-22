@@ -130,6 +130,12 @@
 
 /* ── grupos ── */
 .cx-ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;align-items:start}
+.cx-apresent{margin:0 auto;justify-content:center}
+.cx-apresent [data-cx="apresentProx"]{cursor:pointer}
+.cx-apresent [data-cx="apresentProx"]:hover .cx-gcard{box-shadow:0 0 0 1px var(--cx-bd2),0 10px 34px color-mix(in srgb,var(--cx-accent) 16%,transparent)}
+.cx-adots{display:flex;justify-content:center;gap:8px;margin-top:16px}
+.cx-adot{width:8px;height:8px;padding:0;border-radius:99px;border:0;background:var(--cx-bd);cursor:pointer;transition:all .25s}
+.cx-adot.on{width:22px;background:var(--cx-accent)}
 .cx-gcard{padding:0;animation:cxCard .5s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(var(--i,0)*55ms)}
 @keyframes cxCard{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
 .cx-ghead{display:flex;align-items:center;gap:11px;padding:13px 16px 12px;position:relative}
@@ -244,7 +250,8 @@ tr.exp .cx-rk{background:color-mix(in srgb,var(--cx-bad) 16%,transparent);color:
 
 /* ── jogos (agenda) ── */
 .cx-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
-.cx-chip{border:1px solid var(--cx-bd);background:transparent;color:var(--cx-mut2);padding:6px 13px;border-radius:99px;font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;cursor:pointer;transition:all .18s}
+.cx-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--cx-bd);background:transparent;color:var(--cx-mut2);padding:6px 13px;border-radius:99px;font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;cursor:pointer;transition:all .18s}
+.cx-chip svg{width:11px;height:11px;flex:none}
 .cx-chip:hover{border-color:var(--cx-bd2);color:var(--cx-text)}
 .cx-chip.on{background:var(--cx-accent);border-color:var(--cx-accent);color:var(--cx-on-accent)}
 .cx-lgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:4px 18px}
