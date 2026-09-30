@@ -166,6 +166,8 @@ tr.exp .cx-rk{background:color-mix(in srgb,var(--cx-bad) 16%,transparent);color:
 .cx-cart{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:var(--cx-mut)}
 .cx-cart.am{color:var(--cx-warn)}
 .cx-cart.verm{color:var(--cx-bad)}
+.cx-neg{color:var(--cx-bad)}
+.cx-sub{display:block;font-size:9.5px;font-weight:600;color:var(--cx-mut);line-height:1.1}
 .cx-editcol{width:30px;padding-right:12px!important}
 .cx-editcol svg{width:14px;height:14px;color:var(--cx-mut);transition:color .15s}
 .cx-tbl tr.clic:hover .cx-editcol svg,.cx-tbl tr.clic:focus-visible .cx-editcol svg{color:var(--cx-accent2)}
